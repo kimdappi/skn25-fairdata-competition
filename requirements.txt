@@ -1,0 +1,19 @@
+# 1. API 웹 서버 (FastAPI)
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+pydantic==2.13.3
+
+# 2. 데이터 전처리 및 벡터 DB 검색
+faiss-cpu==1.13.2
+sentence-transformers==5.4.1
+rank-bm25==0.2.2
+kiwipiepy==0.23.1
+numpy==2.2.6
+
+# 3. Reranker 및 ONNX 경량화 추론
+transformers==5.6.2
+optimum==2.1.0
+onnxruntime-gpu==1.25.0
+
+# 4. 고속 LLM 생성 엔진
+vllm==0.19.1

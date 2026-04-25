@@ -1,0 +1,40 @@
+# ==============================================================================
+# Docker 빌드 시 이미지 내부로 복사하지 않을 파일/폴더 목록 (.dockerignore)
+# ==============================================================================
+
+# 1. 데이터 관련 (수십 GB의 원본 데이터 제외 - 이미 vector_db로 가공됨)
+data/
+*.zip
+*.csv
+*.json
+
+# 2. 빌드/전처리 전용 코드 (Phase 1 전용이므로 추론 서버에는 불필요)
+src/data_loader.py
+src/build_index.py
+src/preprocessor.py
+export_onnx.py
+
+# 3. 문서 및 설정 파일 (최종 제출물에는 코드와 모델만 필요)
+README.md
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+
+# 4. 파이썬 환경 및 캐시
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# 5. 기타 임시 파일 및 아카이브
+.ipynb_checkpoints/
+*.tar
+submission.tar
+*.log
+.DS_Store
