@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+
+.DS_Store
+Thumbs.db
+
+.venv/
+venv/
+
+models/
+artifacts/
+results/
+temp_remote_repo/
+
+baseline_rag/__pycache__/
+

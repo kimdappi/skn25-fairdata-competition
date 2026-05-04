@@ -1,0 +1,26 @@
+# Baseline retrieval/evaluation stack for this workspace.
+# Current conda base Python: 3.13.11
+# Note: Windows/Python 3.13 wheel availability can affect sentence-transformers,
+# transformers, torch, and kiwipiepy first.
+
+# Core orchestration / schema
+langgraph==1.0.10
+pydantic==2.11.10
+
+# Retrieval
+faiss-cpu==1.13.2
+rank-bm25==0.2.2
+# SparseEncoder is used for SPLADE-based retrieval.
+sentence-transformers==5.4.1
+kiwipiepy==0.23.1
+
+# ML / tokenizer stack
+scikit-learn==1.7.1
+torch==2.11.0
+transformers==4.57.1
+huggingface_hub==0.36.0
+tokenizers==0.22.2
+
+# Evaluation / utilities
+pandas==2.3.3
+tqdm==4.67.1
