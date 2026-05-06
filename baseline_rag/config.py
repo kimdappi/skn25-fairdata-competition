@@ -119,7 +119,13 @@ def validate_runtime_paths() -> None:
         missing.append(f"MODEL_DIR={MODEL_DIR}")
     if not DATA_DIR.exists():
         missing.append(f"DATA_DIR={DATA_DIR}")
-    if not METRICS_PATH.exists():
+    require_metrics_path = os.getenv("FAIRCOMP_REQUIRE_METRICS_PATH", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if require_metrics_path and not METRICS_PATH.exists():
         missing.append(f"METRICS_PATH={METRICS_PATH}")
     if missing:
         raise FileNotFoundError(
