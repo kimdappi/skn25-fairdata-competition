@@ -85,7 +85,7 @@ class BGEM3HybridModel:
             encoded = {key: value.to(self.device) for key, value in encoded.items()}
             output = self.model(**encoded)
             dense_vecs = F.normalize(output.last_hidden_state[:, 0], dim=-1)
-            vectors.append(dense_vecs.cpu().numpy().astype("float32"))
+            vectors.append(dense_vecs.float().cpu().numpy().astype("float32"))
         return np.vstack(vectors) if vectors else np.zeros((0, 0), dtype="float32")
 
     @torch.inference_mode()
