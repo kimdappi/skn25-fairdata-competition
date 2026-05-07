@@ -1,0 +1,114 @@
+flowchart TD
+    subgraph S1["<b>[1] 원천 데이터 계층</b><br/>Source Data Layer"]
+        A1[":page_facing_up: 의결서 JSON<br/>(공정위 원천 데이터)"]
+    end
+
+    subgraph S2["<b>[2] 데이터 전처리 & 정제 모듈</b><br/>Preprocessing & Cleaning"]
+        direction LR
+        B1[":knife: 중복 제거<br/>SequenceMatcher"]
+        B2[":clipboard: 메타데이터 추출<br/>사건명, 기업명, 위반유형"]
+        B3[":syringe: Text Injection<br/>Context 강화"]
+    end
+
+    subgraph S3["<b>[3] 텍스트 분할 계층</b><br/>Chunking Layer"]
+        D1[":scissors: Chunk 단위 분해<br/>문서 → 청크"]
+        D2[":dart: 검색 단위 최적화<br/>Chunk Size / Overlap"]
+    end
+
+    subgraph S4["<b>[4-A] Dense Path (의미 기반)</b><br/>Semantic Search"]
+        E1[":brain: Dense Embedding<br/>SentenceTransformer / BGE-M3"]
+        E2[":floppy_disk: Dense Index<br/>FAISS / Vector Search"]
+    end
+
+    subgraph S5["<b>[4-B] Sparse Path (키워드 기반)</b><br/>Keyword Search"]
+        F1[":mag: Sparse Tokenizing<br/>형태소 / 토큰 기반 분석"]
+        F2[":books: BM25 Index<br/>BM25Okapi"]
+        F3[":sparkles: BGE-M3 Sparse<br/>Lexical Sparse Retrieval"]
+    end
+
+    subgraph S6["<b>[5] Hybrid Search 계층</b><br/>Hybrid Retrieval + Routing + Rerank"]
+        G0[":compass: Query Routing<br/>질의 유형 / 포커스 분류"]
+        G1[":one: Dense Search"]
+        G2[":two: BM25 Search"]
+        G2A[":three: Sparse Search<br/>BGE-M3 Sparse"]
+        G3[":repeat: RRF Fusion<br/>Dense + BM25 + Sparse"]
+        G4[":outbox_tray: Top-K 후보 선정"]
+        G5[":triangular_flag_on_post: Route / Entity / Structure Boost"]
+        G6[":gem: ColBERT Rerank<br/>최종 재정렬"]
+    end
+
+    subgraph S7["<b>[6] 필터링 & 후처리</b><br/>Filtering & Post-processing"]
+        I1[":office: 문서/기업명 조건 반영<br/>entity / route boost"]
+        I2[":wrench: Fallback 보완<br/>결과 부족 시 Top-5 보정"]
+    end
+
+    subgraph S8["<b>[7] 최종 출력</b><br/>Final Output"]
+        M1[":dart: Top-5 Chunks<br/>근거 청크"]
+        M2[":page_facing_up: Grounded Answer<br/>근거 기반 답변"]
+    end
+
+    subgraph S9["<b>[8] 평가 계층</b><br/>Evaluation Layer"]
+        V1[":abacus: 방법론별 평가 케이스<br/>dense / bm25 / hybrid / routing"]
+        V2[":stopwatch: 쿼리별 시간 측정<br/>answer_elapsed_seconds"]
+        V3[":bar_chart: 평균 성능 집계<br/>Recall@5 / MRR / BERTScore / F1"]
+        V4[":hourglass_flowing_sand: 평균 속도 집계<br/>avg_answer_elapsed_seconds"]
+        V5[":file_folder: JSON 저장<br/>summary / predictions / case_matrix"]
+    end
+
+    %% Flow connections
+    A1 --> B1
+    B1 --> B2
+    B2 --> B3
+    B3 --> D1
+    D1 --> D2
+    D2 --> E1
+    D2 --> F1
+    D2 --> G0
+    E1 --> E2
+    F1 --> F2
+    F1 --> F3
+    E2 --> G1
+    F2 --> G2
+    F3 --> G2A
+    G0 --> G5
+    G1 --> G3
+    G2 --> G3
+    G2A --> G3
+    G3 --> G4
+    G4 --> G5
+    G5 --> G6
+    G6 --> I1
+    I1 --> I2
+    I2 --> M1
+    M1 --> M2
+    M2 --> V1
+    V1 --> V2
+    V2 --> V3
+    V2 --> V4
+    V3 --> V5
+    V4 --> V5
+
+    %% Styling
+    classDef source fill:#1e40af,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef preprocess fill:#065f46,stroke:#34d399,stroke-width:2px,color:#fff
+    classDef chunk fill:#065f46,stroke:#34d399,stroke-width:2px,color:#fff
+    classDef dense fill:#166534,stroke:#22c55e,stroke-width:2px,color:#fff
+    classDef sparse fill:#7e22ce,stroke:#c084fc,stroke-width:2px,color:#fff
+    classDef hybrid fill:#c2410c,stroke:#fb923c,stroke-width:2px,color:#fff
+    classDef filter fill:#854d0e,stroke:#facc15,stroke-width:2px,color:#fff
+    classDef output fill:#1e40af,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef eval fill:#334155,stroke:#94a3b8,stroke-width:2px,color:#fff
+    classDef advanced fill:#9a3412,stroke:#fdba74,stroke-width:3px,color:#fff
+
+    class A1 source
+    class B1,B2,B3 preprocess
+    class D1,D2 chunk
+    class E1,E2 dense
+    class F1,F2,F3 sparse
+    class G1,G2,G2A,G3,G4 hybrid
+    class I1,I2 filter
+    class M1,M2 output
+    class V1,V2,V3,V4,V5 eval
+
+    %% Advanced additions over baseline
+    class F3,G0,G3,G5,G6,V1,V2,V3,V4,V5 advanced
