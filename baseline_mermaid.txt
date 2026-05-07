@@ -1,0 +1,690 @@
+김나연
+.laptopdestroyer
+온라인
+
+음소거 해제
+
+헤드셋 음소거 해제하기
+
+채팅 채널
+공모전서버:일반
+공모전서버 검색
+
+일반 채팅
+2026년 5월 7일
+
+전운열 — 어제 오후 1:312026년 5월 7일 목요일 오후 1:31
+같은 환경으로 돌리는게
+[오후 1:31]2026년 5월 7일 목요일 오후 1:31
+낫지 않을까
+
+김나연 — 어제 오후 1:312026년 5월 7일 목요일 오후 1:31
+오키오키
+
+전운열 — 어제 오후 1:312026년 5월 7일 목요일 오후 1:31
+싶어서
+[오후 1:31]2026년 5월 7일 목요일 오후 1:31
+부탁좀 드리겠슴다..!!
+
+김나연 — 어제 오후 1:322026년 5월 7일 목요일 오후 1:32
+오키오키!!!
+[오후 1:32]2026년 5월 7일 목요일 오후 1:32
+혹시 텍스트 쪽으로 더 회의할거 있을까?!
+[오후 1:33]2026년 5월 7일 목요일 오후 1:33
+코드는 합치고 환경 맞추는거 포함해서 내가 돌리고 우선 표형태러 주면 되는걸로 이해했는데
+
+전운열 — 어제 오후 1:362026년 5월 7일 목요일 오후 1:36
+일단 기획서 내용은
+[오후 1:36]2026년 5월 7일 목요일 오후 1:36
+둘이 올려준거 토대로 한번 작성해볼테니
+[오후 1:36]2026년 5월 7일 목요일 오후 1:36
+내가 올려준 다음에 빼먹은거라든가
+[오후 1:36]2026년 5월 7일 목요일 오후 1:36
+수정할 사항 이따가 얘기해주면
+[오후 1:36]2026년 5월 7일 목요일 오후 1:36
+될것 같슴다
+
+SKN 25기_김홍익 — 어제 오후 1:382026년 5월 7일 목요일 오후 1:38
+
+
+전운열 — 어제 오후 3:292026년 5월 7일 목요일 오후 3:29
+
+[오후 3:29]2026년 5월 7일 목요일 오후 3:29
+팀장 하실분
+[오후 3:29]2026년 5월 7일 목요일 오후 3:29
+팀명 정하실분
+[오후 3:29]2026년 5월 7일 목요일 오후 3:29
+각 1명 씩 구합니다,,
+
+김나연 — 어제 오후 3:302026년 5월 7일 목요일 오후 3:30
+팀장님은 운열님이 해주신다면!! ㅎㅎ!!!!!!
+[오후 3:30]2026년 5월 7일 목요일 오후 3:30
+ㅋㅋㅋㅋ팀명은 생각해볼게...........
+
+전운열 — 어제 오후 3:302026년 5월 7일 목요일 오후 3:30
+캬
+[오후 3:30]2026년 5월 7일 목요일 오후 3:30
+알겠읍니답
+
+김나연 — 어제 오후 3:302026년 5월 7일 목요일 오후 3:30
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+[오후 3:30]2026년 5월 7일 목요일 오후 3:30
+아니 믿음직스러우니까 ^^!!
+
+전운열 — 어제 오후 3:302026년 5월 7일 목요일 오후 3:30
+사실 팀장보다
+[오후 3:30]2026년 5월 7일 목요일 오후 3:30
+팀명 구하는게
+
+김나연 — 어제 오후 3:312026년 5월 7일 목요일 오후 3:31
+그것도맞긴해
+
+전운열 — 어제 오후 3:312026년 5월 7일 목요일 오후 3:31
+더힘든 1인이라..
+
+김나연 — 어제 오후 3:312026년 5월 7일 목요일 오후 3:31
+깊생해볼게
+
+1
+반응 추가하기
+
+전운열 — 어제 오후 5:172026년 5월 7일 목요일 오후 5:17
+flowchart TD
+    subgraph S1["<b>[1] 원천 데이터 계층</b><br/>Source Data Layer"]
+        A1[":page_facing_up: 의결서 JSON<br/>(공정위 원천 데이터)"]
+    end
+
+    subgraph S2["<b>[2] 데이터 전처리 & 정제 모듈</b><br/>Preprocessing & Cleaning"]
+
+확장 (82줄)
+mermaid 기본.txt
+mermaid 기본.txt (4KB)
+4KB
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 5:20]2026년 5월 7일 목요일 오후 5:20
+;;'''''';'''';';;';;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+SKN 25기_김홍익 — 어제 오후 5:202026년 5월 7일 목요일 오후 5:20
+흐흐흫
+
+전운열 — 어제 오후 5:222026년 5월 7일 목요일 오후 5:22
+;''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''';'';
+[오후 5:22]2026년 5월 7일 목요일 오후 5:22
+]
+[오후 5:23]2026년 5월 7일 목요일 오후 5:23
+];;';';';;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+[오후 5:23]2026년 5월 7일 목요일 오후 5:23
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+[오후 5:23]2026년 5월 7일 목요일 오후 5:23
+;
+[오후 5:23]2026년 5월 7일 목요일 오후 5:23
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+SKN 25기_김홍익 — 어제 오후 5:232026년 5월 7일 목요일 오후 5:23
+ 끼야야아악
+
+SKN 25기_김홍익 — 어제 오후 7:212026년 5월 7일 목요일 오후 7:21
+dma
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 7:21]2026년 5월 7일 목요일 오후 7:21
+음
+
+김나연 — 어제 오후 7:232026년 5월 7일 목요일 오후 7:23
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+[오후 7:24]2026년 5월 7일 목요일 오후 7:24
+오빠 ..... 고양이 키워...?
+
+SKN 25기_김홍익 — 어제 오후 7:252026년 5월 7일 목요일 오후 7:25
+피피티로 낑낑 거리고있었는데 지피티 딸깍을 이길수 없겠구만
+[오후 7:25]2026년 5월 7일 목요일 오후 7:25
+이거 내가 한땀한땀 하다가 한세월 걸리겄네
+[오후 7:27]2026년 5월 7일 목요일 오후 7:27
+이거는 본래 만들려고 했던 머클 트리 구조....
+
+
+
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 7:27]2026년 5월 7일 목요일 오후 7:27
+https://github.com/VectifyAI/PageIndex
+GitHub
+GitHub - VectifyAI/PageIndex: 📑 PageIndex: Document Index for Ve...
+📑 PageIndex: Document Index for Vectorless, Reasoning-based RAG - VectifyAI/PageIndex
+
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 7:27]2026년 5월 7일 목요일 오후 7:27
+참고 했던거
+
+김나연 — 어제 오후 7:282026년 5월 7일 목요일 오후 7:28
+아 이거 최근에 깃헙트렌드 1위햇던거
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+수정
+전달
+기타
+[오후 7:28]2026년 5월 7일 목요일 오후 7:28
+이거 본거구나
+
+SKN 25기_김홍익 — 어제 오후 7:292026년 5월 7일 목요일 오후 7:29
+이거는 지피티가 만든 구조도인데... 이걸 내가 한땀한땀 만들다가 노안오겠어
+
+
+[오후 7:29]2026년 5월 7일 목요일 오후 7:29
+저거 근데 저대로 써도되나...
+
+김나연 — 어제 오후 7:302026년 5월 7일 목요일 오후 7:30
+어................ .
+
+SKN 25기_김홍익 — 어제 오후 7:322026년 5월 7일 목요일 오후 7:32
+ㅠㅠ
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+김나연 — 어제 오후 7:322026년 5월 7일 목요일 오후 7:32
+모호~하네....
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+수정
+전달
+기타
+[오후 7:32]2026년 5월 7일 목요일 오후 7:32
+참고만해서 새로 만드는게 정석일것같긴헤...
+
+SKN 25기_김홍익 — 어제 오후 7:322026년 5월 7일 목요일 오후 7:32
+형이아까 뭐 구조도 그리던거 뭐지
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 7:33]2026년 5월 7일 목요일 오후 7:33
+머메이드 어쩌구
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+김나연 — 어제 오후 7:352026년 5월 7일 목요일 오후 7:35
+머메이드 맞아!
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+수정
+전달
+기타
+
+전운열 — 어제 오후 7:422026년 5월 7일 목요일 오후 7:42
+머메이드 맞음 ㅇㅇㅇㅇㅇ
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+SKN 25기_김홍익 — 어제 오후 8:032026년 5월 7일 목요일 오후 8:03
+flowchart TD
+    %% 스타일 정의
+    classDef process fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
+    classDef blockchain fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef db fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px;
+
+    subgraph Phase1["데이터 인제스천 및 블록체인 인덱싱 (embedding2.py)"]
+        A[원본 JSON 의결서 데이터] --> B(텍스트 정제 및 청킹)
+
+        B --> C{"[프로세스 2] 타임스탬프 서버"}
+        C -- "생성 시간(Timestamp) 부여" --> D
+        class C blockchain
+
+        D{"[프로세스 1] 선형 체인 구조"}
+        D -- "SHA256(이전 해시 + 텍스트 + 타임스탬프)" --> E(현재 청크 해시 생성 및 prev_hash 갱신)
+        class D blockchain
+
+        E --> F[(ChromaDB: 벡터 DB)]:::db
+        E --> G[(BM25: 키워드 인덱스)]:::db
+        E --> H[(Corpus Info: 메타데이터 & 해시)]:::db
+    end
+
+    subgraph Phase2["하이브리드 검색 및 합의 엔진 (search_test4.py)"]
+        I[사용자 쿼리 및 회사명 입력] --> J(Vector Search)
+        I --> K(BM25 Search)
+
+        J -.-> F
+        K -.-> G
+
+        J --> L(RRF 랭킹 융합)
+        K --> L
+
+        L --> M{"[프로세스 3] 합의 알고리즘 (가장 긴 체인)"}
+        class M blockchain
+        M -.-> |메타데이터 참조| H
+        M -- "동일 위반유형 3개 이상" --> N[합의 가중치 부여<br/>consensus_weight += 0.15]
+        M -- "단일/소수 정보" --> O[기본 RRF 점수 유지]
+
+        N --> P(Top-K 결과 추출)
+        O --> P
+    end
+
+    subgraph Phase3["SPV 기반 엣지 표출 (app.py & index.html)"]
+        P --> Q(API 응답 구성)
+        Q -.-> |"검증 완료 플래그(is_verified)<br/>해시(hash), 타임스탬프 포함"| R[프론트엔드 UI 렌더링]
+
+        R --> S["데이터 증명 UI 표출<br/>( 검증됨,  최신 배지)"]
+    end
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 8:04]2026년 5월 7일 목요일 오후 8:04
+https://mermaid.live/edit#pako:eNqFVm1v01YU_itXFzE5Ig2xEwfqbUi04aVAobSMD4ujyomvG4skjuyEl5VKhbpoo6koWiICOF0qSoEpk9y0ZUFC2n_Zx_ha2k_YsZ02pC0i_mL73Oe8POc5J57HWU0mWMBKXruXzUl6Gd1KikUEv5MnEX266S4t0uZnRFt12mwEhmxeMowkUVBJ17LEMJCi5vPCCcIqvELCRlnX7hDhRDQmjSrx_uPIPVUu5wSudP_7Qz4yeS17BwKrxb4bRVFGs_EDN0omG-Xkb7qRM_tw3rsO4KPEu4bhrA8PHBiVzJwulXJoKicZhE2J2Fm1aXPXNW1Em13asoAD2rGQYz9DTrfmbDRpZxcsntVZ3aYr24ghhQyRZbU4x0VKD0IiTge-vd_5FH295ux00ZWZG9cB0-h1bGqCu_0oaTQycg6NMe7yqsf2065PdSsISDt_uY8_hQbuBndjPm58XsQpt2Y6GxY1u-AAcWnktWzd9HvXBhuCeE7HFPHCAD0OaCRiutSk5jaiK1bPNplbaoEYZalQCiHn4yJ90RaxHyQ5wPl8A3rQteNySx7Jik1DFi23UUd99np7bbphD-WUDHKauXye4xMMsENbJnLru5AdOoUG_Jw6XGCon-cFxm2YdL3t0_aovY_tF-nxWdLJ3VlodA71bGhdK3S4suQ3KrvgB7qYYsZzulaQkmMCcjobnliSY6G0IAhy5vDhSylmbJLjBeQ-3qSvq87v1r50nm5-BXIZ_Gt6qWKgiaKiQYgPNSh5IMzv-qUNwUlRPl7UHIjarTcA63Srzlbby6DXWaRLv_mcuPUPIEtEX9ToOxMxBpH0bG62DEqIH1HzRIo-btNXH-j6GqL_fAZngYtXVXjv_LmM6Pqy03obaPoKc5tky5qOZnyXX3A94duv-rwctQ7urqCRiEf34M3V4M2lr5wG0zVmevoicta9wUHU2oPyQkN478xx8Gu-afKIdGPpA4rq1d5OC4qmWw3E9GwQ4VvU6-72NR0aUnOgp8lj9TQZVPHwcF-p3YWheIguDx31hsJ59tLfwpbp2A1q-ZMU69melHbp0qP-AFxP9TP1ctt8Tj81-oP8Q0Y_fS6rFQ1SNCrG7D2izuXK6NSPKBph-fTRaCvvIdpp-qRKf214-8jZ2e2HuJHqdW1vn3ks09aaf8Bq0XeL6eNIve6DpphbWmnkKqjO7u1AFR9r9KP1RVduBKe-oeMY6Hhm6jbyErA9wb6BqMh9boEzxEilEsgVRkMtyuR-JFcu5Ie1O-UHucmcn5oA1p47K3v-EjK3v0jkZr8xIvYGZKuJ6EvTeVNFbq3qrDd6f3cZ1Zi9S3RVUYkc8lkNJpHxlkoofGT1us_abv29iB-i6UBVLdhgMGreDP40gZxW1VmtOe8eHUvetJ_xzPB_0lbTmzPABoX7OTD_WssoyNhZex9G__3xBBbtngUbDubTBpoGVAC9OIzndFXGQlmvkDAuEL0geY943jsi4nKOFIiIBbiViSJV8mURi8UFgJWk4s-aVthH6lplLocFRcob8FQpyVKZJFUJelY4eKtDQKKPa5ViGQssz3K-FyzM4_tYiLMRLnomlkjw_FmePRs9w4fxAyyMcKOjkdEEHzsTTyTibIJjF8L4Fz8wG-HjHBeP8fE4GKJRNh7GRFZhzUwG3zH-58zC_xgOjwY
+Online FlowChart & Diagrams Editor - Mermaid Live Editor
+Simplify documentation and avoid heavy tools. Open source Visio Alternative. Commonly used for explaining your code! Mermaid is a simple markdown-like script language for generating charts from text via javascript.
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 8:04]2026년 5월 7일 목요일 오후 8:04
+음
+
+SKN 25기_김홍익 — 어제 오후 8:122026년 5월 7일 목요일 오후 8:12
+싸인은 이거믄 돼?
+
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+전운열 — 어제 오후 9:202026년 5월 7일 목요일 오후 9:20
+ㅇㅇㅇㅇ yes
+
+전운열 — 어제 오후 9:562026년 5월 7일 목요일 오후 9:56
+팀이름은
+[오후 9:56]2026년 5월 7일 목요일 오후 9:56
+아까 너가 아이디어 낸거 이름 (수정됨)2026년 5월 7일 목요일 오후 9:56
+[오후 9:56]2026년 5월 7일 목요일 오후 9:56
+뭐였지
+
+SKN 25기_김홍익 — 어제 오후 9:572026년 5월 7일 목요일 오후 9:57
+운열나연홍익퐈이야
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 9:57]2026년 5월 7일 목요일 오후 9:57
+어때..
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+전운열 — 어제 오후 9:572026년 5월 7일 목요일 오후 9:57
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 9:58]2026년 5월 7일 목요일 오후 9:58
+
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+[오후 9:58]2026년 5월 7일 목요일 오후 9:58
+일단 이름 들어간거는
+[오후 9:58]2026년 5월 7일 목요일 오후 9:58
+까비..
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+답장
+전달
+기타
+
+김나연 — 어제 오후 9:592026년 5월 7일 목요일 오후 9:59
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+수정
+전달
+기타
+[오후 9:59]2026년 5월 7일 목요일 오후 9:59
+우리 이름 넣고 싶으면....
+:saluting_face:
+클릭해서 반응
+:thumbsup:
+클릭해서 반응
+:white_check_mark:
+클릭해서 반응
+반응 추가하기
+수정
+전달
+기타
+[오후 10:01]2026년 5월 7일 목요일 오후 10:01
+공정.py를 팀명으로 하면 안되겠지
+[오후 10:01]2026년 5월 7일 목요일 오후 10:01
+오타난줄 아시겠지....
+
+전운열 — 어제 오후 10:032026년 5월 7일 목요일 오후 10:03
+.gitignore
+[오후 10:03]2026년 5월 7일 목요일 오후 10:03
+Dockerfile
+[오후 10:03]2026년 5월 7일 목요일 오후 10:03
+.yaml .....
+[오후 10:03]2026년 5월 7일 목요일 오후 10:03
+뭘로 해야 힙해보이지....
+
+김나연 — 어제 오후 10:042026년 5월 7일 목요일 오후 10:04
+while(공정): print(솔루션)
+[오후 10:04]2026년 5월 7일 목요일 오후 10:04
+...점점 나빠지는 상황
+[오후 10:04]2026년 5월 7일 목요일 오후 10:04
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+
+전운열 — 어제 오후 10:042026년 5월 7일 목요일 오후 10:04
+약간 이런거
+[오후 10:05]2026년 5월 7일 목요일 오후 10:05
+항마력 있는 사람한테
+[오후 10:05]2026년 5월 7일 목요일 오후 10:05
+시켜야한느데
+
+SKN 25기_김홍익 — 어제 오후 10:062026년 5월 7일 목요일 오후 10:06
+모두의 의결서
+
+김나연 — 어제 오후 10:072026년 5월 7일 목요일 오후 10:07
+나쁘지않아
+
+전운열 — 어제 오후 10:072026년 5월 7일 목요일 오후 10:07
+이걸로
+[오후 10:07]2026년 5월 7일 목요일 오후 10:07
+갈까??
+
+SKN 25기_김홍익 — 어제 오후 10:072026년 5월 7일 목요일 오후 10:07
+좀 더 띵킹
+
+김나연 — 어제 오후 10:092026년 5월 7일 목요일 오후 10:09
+public class 의결서
+[오후 10:11]2026년 5월 7일 목요일 오후 10:11
+모두의 의결서 느낌은 좋은디
+[오후 10:11]2026년 5월 7일 목요일 오후 10:11
+더 독특하게 하려고?
+
+SKN 25기_김홍익 — 어제 오후 10:112026년 5월 7일 목요일 오후 10:11
+음
+[오후 10:11]2026년 5월 7일 목요일 오후 10:11
+가결맨
+[오후 10:11]2026년 5월 7일 목요일 오후 10:11
+ㅋㅋ
+
+김나연 — 어제 오후 10:112026년 5월 7일 목요일 오후 10:11
+우선 독특하긴해
+
+SKN 25기_김홍익 — 어제 오후 10:122026년 5월 7일 목요일 오후 10:12
+꽃보다의결
+
+김나연 — 어제 오후 10:132026년 5월 7일 목요일 오후 10:13
+오빠 잘한다
+
+전운열 — 어제 오후 10:142026년 5월 7일 목요일 오후 10:14
+항마력
+[오후 10:14]2026년 5월 7일 목요일 오후 10:14
+좋네
+[오후 10:14]2026년 5월 7일 목요일 오후 10:14
+ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
+[오후 10:14]2026년 5월 7일 목요일 오후 10:14
+더 뽑아볼거닝
+[오후 10:14]2026년 5월 7일 목요일 오후 10:14
+아니면 저 3개 중에 고를까
+
+SKN 25기_김홍익 — 어제 오후 10:152026년 5월 7일 목요일 오후 10:15
+3개가 뭐야
+[오후 10:15]2026년 5월 7일 목요일 오후 10:15
+뭐뭐뭐임
+
+전운열 — 어제 오후 10:152026년 5월 7일 목요일 오후 10:15
+모두의 의결서
+[오후 10:15]2026년 5월 7일 목요일 오후 10:15
+가결맨
+[오후 10:15]2026년 5월 7일 목요일 오후 10:15
+꽃보다의결
+
+SKN 25기_김홍익 — 어제 오후 10:162026년 5월 7일 목요일 오후 10:16
+ㅋㅋㅋ
+[오후 10:16]2026년 5월 7일 목요일 오후 10:16
+가결맨은
+[오후 10:16]2026년 5월 7일 목요일 오후 10:16
+음
+[오후 10:19]2026년 5월 7일 목요일 오후 10:19
+꽃보다의결 나쁘지않은듯
+
+김나연 — 어제 오후 10:192026년 5월 7일 목요일 오후 10:19
+슬기로운 공정생활
+[오후 10:19]2026년 5월 7일 목요일 오후 10:19
+꽃보다 의결이
+[오후 10:19]2026년 5월 7일 목요일 오후 10:19
+눈에 팍 들어오긴해
+
+전운열 — 어제 오후 10:202026년 5월 7일 목요일 오후 10:20
+뭐야
+오래된 메시지를 보고 있어요
+
+최근으로 이동하기
+
+#일반에 메시지 보내기
+﻿
+친구를 업그레이드하세요! Nitro의 멋진 채팅 특전을 선물하세요.
+일반(채널) 멤버 목록
+온라인, 3명
+온라인
+ — 3
+
+SKN 25기_김홍익
+
+김나연
+서버 주인
+
+전운열
+flowchart TD
+    subgraph S1["<b>[1] 원천 데이터 계층</b><br/>Source Data Layer"]
+        A1[":page_facing_up: 의결서 JSON<br/>(공정위 원천 데이터)"]
+    end
+
+    subgraph S2["<b>[2] 데이터 전처리 & 정제 모듈</b><br/>Preprocessing & Cleaning"]
+        direction LR
+        B1[":knife: 중복 제거<br/>SequenceMatcher"]
+        B2[":clipboard: 메타데이터 추출<br/>사건명, 기업명, 위반유형"]
+        B3[":syringe: Text Injection<br/>Context 강화"]
+    end
+
+    subgraph S3["<b>[3] 텍스트 분할 계층</b><br/>Chunking Layer"]
+        D1[":scissors: Chunk 단위 분해<br/>문서 → 청크"]
+        D2[":dart: 검색 단위 최적화<br/>Chunk Size / Overlap"]
+    end
+
+    subgraph S4["<b>[4-A] Dense Path (의미 기반)</b><br/>Semantic Search"]
+        E1[":brain: Dense Embedding<br/>SentenceTransformer<br/>BAAI/bge-m3"]
+        E2[":floppy_disk: Vector DB<br/>ChromaDB<br/>HNSW, Cosine"]
+    end
+
+    subgraph S5["<b>[4-B] Sparse Path (키워드 기반)</b><br/>Keyword Search"]
+        F1[":mag: Sparse Tokenizing<br/>Kiwi 형태소 분석<br/>명사/동사 추출"]
+        F2[":books: BM25 Index<br/>BM25Okapi"]
+    end
+
+    subgraph S6["<b>[5] Hybrid Search 계층</b><br/>Hybrid Retrieval + Keyword Routing"]
+        G1[":one: Vector Search"]
+        G2[":two: BM25 Search"]
+        G3[":three: RRF Fusion<br/>Reciprocal Rank Fusion"]
+        G4[":outbox_tray: Top-K 후보 선정"]
+    end
+
+    subgraph S7["<b>[6] 필터링 & 후처리</b><br/>Filtering & Post-processing"]
+        I1[":office: 기업명 조건 필터<br/>where clause"]
+        I2[":wrench: Fallback 보완<br/>결과 부족 시"]
+    end
+
+    subgraph S8["<b>[7] 최종 출력</b><br/>Final Output"]
+        M1[":dart: Top-K Chunks<br/>근거 청크"]
+        M2[":page_facing_up: Grounded Answer<br/>근거 기반 답변"]
+    end
+
+    %% Flow connections
+    A1 --> B1
+    B1 --> B2
+    B2 --> B3
+    B3 --> D1
+    D1 --> D2
+    D2 --> E1
+    D2 --> F1
+    E1 --> E2
+    F1 --> F2
+    E2 --> G1
+    F2 --> G2
+    G1 --> G3
+    G2 --> G3
+    G3 --> G4
+    G4 --> I1
+    I1 --> I2
+    I2 --> M1
+    M1 --> M2
+
+    %% Styling
+    classDef source fill:#1e40af,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef preprocess fill:#065f46,stroke:#34d399,stroke-width:2px,color:#fff
+    classDef chunk fill:#065f46,stroke:#34d399,stroke-width:2px,color:#fff
+    classDef dense fill:#166534,stroke:#22c55e,stroke-width:2px,color:#fff
+    classDef sparse fill:#7e22ce,stroke:#c084fc,stroke-width:2px,color:#fff
+    classDef hybrid fill:#c2410c,stroke:#fb923c,stroke-width:2px,color:#fff
+    classDef filter fill:#854d0e,stroke:#facc15,stroke-width:2px,color:#fff
+    classDef output fill:#1e40af,stroke:#3b82f6,stroke-width:2px,color:#fff
+
+    class A1 source
+    class B1,B2,B3 preprocess
+    class D1,D2 chunk
+    class E1,E2 dense
+    class F1,F2 sparse
+    class G1,G2,G3,G4 hybrid
+    class I1,I2 filter
+    class M1,M2 output

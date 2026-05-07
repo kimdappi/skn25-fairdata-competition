@@ -156,39 +156,125 @@ def discover_embedding_models() -> list[str]:
 def build_case_matrix() -> list[EvaluationCase]:
     generation_model_name = os.getenv("FAIRCOMP_GENERATION_MODEL", "Qwen3-8B")
     cases: list[EvaluationCase] = []
-    for embedding_model_name in discover_embedding_models():
-        families = [
-            ("dense_only", {"use_dense": True, "use_bm25": False, "use_bge_sparse": False}),
-            ("bm25_only", {"use_dense": False, "use_bm25": True, "use_bge_sparse": False}),
-            ("dense_bm25", {"use_dense": True, "use_bm25": True, "use_bge_sparse": False}),
-        ]
-        if embedding_model_name == "embedding_bge_m3":
-            families.append(("dense_bm25_sparse", {"use_dense": True, "use_bm25": True, "use_bge_sparse": True}))
+    discovered_models = set(discover_embedding_models())
+    requested_models = ["embedding_bge_m3", "embedding_ko_legal_sbert"]
 
-        for family_label, family_flags in families:
-            for router_enabled in [False, True]:
-                options = RetrieverOptions(
-                    router_mode="ollama" if router_enabled else "off",
-                    use_dense=family_flags["use_dense"],
-                    use_bm25=family_flags["use_bm25"],
-                    use_routing=router_enabled,
-                    use_route_boost=router_enabled,
-                    use_entity_boost=router_enabled,
-                    use_chunk_lexical_score=family_flags["use_bm25"] or family_flags["use_bge_sparse"],
-                    use_chunk_structure_boost=router_enabled,
-                    use_doc_rank_boost=True,
-                    use_bge_sparse=family_flags["use_bge_sparse"],
-                    use_bge_colbert=False,
-                ).normalized(embedding_model_name)
-                cases.append(
-                    EvaluationCase(
-                        embedding_model_name=embedding_model_name,
-                        family_label=family_label,
-                        router_enabled=router_enabled,
-                        options=options,
-                        generation_model_name=generation_model_name,
-                    )
+    preset_matrix: dict[str, list[tuple[str, dict[str, object]]]] = {
+        "embedding_bge_m3": [
+            (
+                "dense_only",
+                {
+                    "router_enabled": False,
+                    "use_dense": True,
+                    "use_bm25": False,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "bm25_only",
+                {
+                    "router_enabled": False,
+                    "use_dense": False,
+                    "use_bm25": True,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "dense_bm25_sparse_rrf",
+                {
+                    "router_enabled": False,
+                    "use_dense": True,
+                    "use_bm25": True,
+                    "use_bge_sparse": True,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "dense_bm25_sparse_routing_rrf_colbert",
+                {
+                    "router_enabled": True,
+                    "use_dense": True,
+                    "use_bm25": True,
+                    "use_bge_sparse": True,
+                    "use_bge_colbert": True,
+                },
+            ),
+        ],
+        "embedding_ko_legal_sbert": [
+            (
+                "dense_only",
+                {
+                    "router_enabled": False,
+                    "use_dense": True,
+                    "use_bm25": False,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "bm25_only",
+                {
+                    "router_enabled": False,
+                    "use_dense": False,
+                    "use_bm25": True,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "dense_bm25_rrf",
+                {
+                    "router_enabled": False,
+                    "use_dense": True,
+                    "use_bm25": True,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+            (
+                "dense_bm25_routing_rrf",
+                {
+                    "router_enabled": True,
+                    "use_dense": True,
+                    "use_bm25": True,
+                    "use_bge_sparse": False,
+                    "use_bge_colbert": False,
+                },
+            ),
+        ],
+    }
+
+    for embedding_model_name in requested_models:
+        if embedding_model_name not in discovered_models:
+            continue
+        for family_label, config in preset_matrix[embedding_model_name]:
+            router_enabled = bool(config["router_enabled"])
+            use_bm25 = bool(config["use_bm25"])
+            use_bge_sparse = bool(config["use_bge_sparse"])
+            options = RetrieverOptions(
+                router_mode="ollama" if router_enabled else "off",
+                use_dense=bool(config["use_dense"]),
+                use_bm25=use_bm25,
+                use_routing=router_enabled,
+                use_route_boost=router_enabled,
+                use_entity_boost=router_enabled,
+                use_chunk_lexical_score=use_bm25 or use_bge_sparse,
+                use_chunk_structure_boost=router_enabled,
+                use_doc_rank_boost=True,
+                use_bge_sparse=use_bge_sparse,
+                use_bge_colbert=bool(config["use_bge_colbert"]),
+            ).normalized(embedding_model_name)
+            cases.append(
+                EvaluationCase(
+                    embedding_model_name=embedding_model_name,
+                    family_label=family_label,
+                    router_enabled=router_enabled,
+                    options=options,
+                    generation_model_name=generation_model_name,
                 )
+            )
 
     family_contains = os.getenv("EVAL_FAMILY_CONTAINS", "").strip()
     model_contains = os.getenv("EVAL_MODEL_CONTAINS", "").strip()
