@@ -9,11 +9,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-COPY raw ./raw
+COPY data ./data
 COPY server.py .
 COPY docs ./docs
 COPY models ./models
 COPY index ./index
+COPY scripts ./scripts
 
 EXPOSE 8000
 

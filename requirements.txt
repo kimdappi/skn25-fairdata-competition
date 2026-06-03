@@ -1,3 +1,10 @@
 fastapi==0.115.0
 uvicorn==0.30.6
 pydantic==2.9.2
+numpy>=1.26,<2.0
+scipy>=1.11,<1.14
+torch>=2.1,<2.7
+transformers>=4.44,<4.46
+chromadb>=0.5,<0.6
+huggingface_hub>=0.24,<1.0
+bert-score>=0.3.13,<0.4

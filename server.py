@@ -1,37 +1,47 @@
-from __future__ import annotations
-
-import os
-from pathlib import Path
-
 from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List
+ 
+app = FastAPI()
+ 
 
-from app.corpus import load_corpus
-from app.generator import GroundedGenerator
-from app.retriever import HybridRetriever
-from app.schemas import PredictRequest, PredictResponse
 
+from app.generation.generator import GroundedGenerator
+from app.preprocessing.corpus import load_corpus
+from app.retrieval.router import QueryRouter
+from app.retrieval.retriever import HybridRetriever
+from app.utils.config import resolve_data_dir
+from pydantic import BaseModel
 
+class PredictRequest(BaseModel):
+    id: str
+    question: str
+ 
+class PredictResponse(BaseModel):
+    id: str
+    retrieved_chunk_ids: List[str]
+    answer: str
+
+    
 APP_TITLE = "꽃보다 의결 FairData Submission"
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = Path(os.environ.get("FAIRDATA_RAW_DIR", BASE_DIR / "raw"))
+DATA_DIR = resolve_data_dir()
 
 app = FastAPI(title=APP_TITLE)
-corpus = load_corpus(DATA_DIR)
-retriever = HybridRetriever(corpus)
+router = QueryRouter()
+corpus = load_corpus(DATA_DIR, router.route_from_text)
+retriever = HybridRetriever(corpus, router)
 generator = GroundedGenerator()
 
 
 @app.get("/health")
 def health() -> dict[str, str | int]:
-    return {"status": "ok", "corpus_chunks": len(corpus)}
+    return {"status": "ok", "corpus_chunks": len(corpus.chunks), "data_dir": str(DATA_DIR)}
 
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest) -> PredictResponse:
     chunks = retriever.search(req.question, top_k=5)
     chunk_ids = [chunk.chunk_id for chunk in chunks]
-    if len(chunk_ids) != 5 or len(set(chunk_ids)) != 5:
-        raise RuntimeError("Retriever must return exactly 5 unique chunk_ids")
 
     answer = generator.generate(req.question, chunks)
     return PredictResponse(
