@@ -3,6 +3,9 @@
 data/
 models/
 
+# [Experiments]
+experiments/baseline_rag/__pycache__/
+
 # [Binary & Archives]
 *.zip
 *.tar

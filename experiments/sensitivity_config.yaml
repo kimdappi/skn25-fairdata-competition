@@ -1,0 +1,60 @@
+# Sensitivity Analysis — RRF 파라미터 최적화 가이드라인
+#
+# 이 파일은 3개 모형의 RRF 하이퍼파라미터에 대한
+# 민감도 분석(Sensitivity Analysis) 설정을 정의합니다.
+#
+# Usage: python benchmark_three_models.py && python sensitivity_analysis.py
+
+sensitivity_experiments:
+  # ── RRF k 값 변화 ──
+  rrf_k_values:
+    param: "rrf_k"
+    values: [20, 40, 60, 80, 100]
+    description: "RRF k 상수가 Recall@5에 미치는 영향"
+    baseline: 60
+
+  # ── Consensus 가중치 비율 ──
+  consensus_weights:
+    param: "consensus_weight"
+    values: [0.05, 0.10, 0.15, 0.20, 0.30]
+    description: "Consensus 가중치(가장 긴 체인) 변경 시 MRR 변화"
+    baseline: 0.15
+
+  # ── Vector vs BM25 가중치 비율 ──
+  retrieval_weights:
+    param: "vector_bm25_ratio"
+    values: [
+      {vector: 0.60, bm25: 0.40},
+      {vector: 0.70, bm25: 0.15, consensus: 0.15},
+      {vector: 0.60, bm25: 0.25, consensus: 0.15},
+      {vector: 0.50, bm25: 0.35, consensus: 0.15},
+      {vector: 0.40, bm25: 0.45, consensus: 0.15},
+    ]
+    description: "Dense:BM25:Consensus 비율 최적화"
+    baseline: {vector: 0.60, bm25: 0.25, consensus: 0.15}
+
+  # ── Consensus Threshold 변화 ──
+  consensus_thresholds:
+    param: "consensus_threshold"
+    values: [2, 3, 5, 7, 10]
+    description: "Consensus 발동 임계값 (동일 유형 청크 최소 개수)"
+    baseline: 3
+
+  # ── Top-K 변화 ──
+  top_k_values:
+    param: "top_k"
+    values: [3, 5, 10, 15, 20]
+    description: "반환 청크 수(K)가 Recall에 미치는 영향"
+    baseline: 5
+
+expected_output:
+  format: "results/sensitivity/sensitivity_YYYYMMDD_HHMMSS.csv"
+  columns:
+    - experiment_name
+    - param_name
+    - param_value
+    - mean_recall5
+    - mean_mrr
+    - mean_latency_ms
+    - std_recall5
+    - std_mrr

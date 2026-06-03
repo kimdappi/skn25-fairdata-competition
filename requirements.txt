@@ -17,3 +17,12 @@ onnxruntime-gpu==1.25.0
 
 # 4. 고속 LLM 생성 엔진
 vllm==0.19.1
+
+# 5. 실험/평가 도구 (baseline_rag, benchmark)
+langgraph==1.0.10
+scikit-learn==1.7.1
+torch==2.11.0
+huggingface_hub==0.36.0
+tokenizers==0.22.2
+pandas==2.3.3
+tqdm==4.67.1
