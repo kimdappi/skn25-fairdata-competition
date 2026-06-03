@@ -1,101 +1,122 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
+DENSE_BACKEND = "bgem3"
+SPARSE_BACKEND = "bgem3"
+MULTIVECTOR_BACKEND = "bgem3"
+RERANK_BACKEND = "bge_reranker"
+USE_RRF_FUSION = True
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 데이터 디렉터리를 결정합니다.
+
+# 원천 코퍼스 디렉터리를 반환합니다.
 def resolve_data_dir() -> Path:
-    candidates = [
-        os.getenv("FAIRDATA_RAW_DIR", "").strip(),
-        os.getenv("FAIRDATA_DATA_DIR", "").strip(),
-        str(BASE_DIR / "data" / "raw"),
-        str(BASE_DIR / "raw"),
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-    return Path(BASE_DIR / "data" / "raw")
+    return BASE_DIR / "data" / "raw"
 
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 BGE-M3 모델 디렉터리를 결정합니다.
+# 검색 경로 공통 기본 BGE-M3 모델 디렉터리를 반환합니다.
 def resolve_bgem3_model_dir() -> Path:
-    candidates = [
-        os.getenv("FAIRDATA_BGEM3_MODEL_DIR", "").strip(),
-        os.getenv("FAIRDATA_MODEL_DIR", "").strip(),
-        str(BASE_DIR / "models" / "bge-m3"),
-        str(BASE_DIR / "models" / "embedding_bge_m3"),
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-    return Path(BASE_DIR / "models" / "bge-m3")
+    return BASE_DIR / "models" / "bge-m3"
 
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 BGE reranker 모델 디렉터리를 결정합니다.
+# dense 전용 모델 디렉터리를 반환합니다.
+def resolve_dense_model_dir() -> Path:
+    return resolve_bgem3_model_dir()
+
+
+# sparse 전용 모델 디렉터리를 반환합니다.
+def resolve_sparse_model_dir() -> Path:
+    return resolve_bgem3_model_dir()
+
+
+# multivector 전용 모델 디렉터리를 반환합니다.
+def resolve_multivector_model_dir() -> Path:
+    return resolve_bgem3_model_dir()
+
+
+# reranker 모델 디렉터리를 반환합니다.
 def resolve_bge_reranker_model_dir() -> Path:
-    candidates = [
-        os.getenv("FAIRDATA_BGE_RERANKER_MODEL_DIR", "").strip(),
-        os.getenv("FAIRDATA_RERANKER_MODEL_DIR", "").strip(),
-        str(BASE_DIR / "models" / "bge-reranker-v2-m3"),
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-    return Path(BASE_DIR / "models" / "bge-reranker-v2-m3")
+    return BASE_DIR / "models" / "bge-reranker-v2-m3"
 
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 Qwen 생성 모델 디렉터리를 결정합니다.
+# reranker backend 종류를 반환합니다.
+def resolve_reranker_backend_name() -> str:
+    return RERANK_BACKEND
+
+
+# 생성 모델 디렉터리를 반환합니다.
 def resolve_qwen_model_dir() -> Path:
-    candidates = [
-        os.getenv("FAIRDATA_QWEN_MODEL_DIR", "").strip(),
-        os.getenv("FAIRDATA_GENERATION_MODEL_DIR", "").strip(),
-        str(BASE_DIR / "models" / "qwen2-7b-instruct"),
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-    return Path(BASE_DIR / "models" / "qwen2-7b-instruct")
+    return BASE_DIR / "models" / "qwen2-7b-instruct"
 
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 Chroma 인덱스 디렉터리를 결정합니다.
+# 검색 인덱스 루트 디렉터리를 반환합니다.
 def resolve_index_root_dir() -> Path:
-    env_candidates = [
-        os.getenv("FAIRDATA_INDEX_ROOT_DIR", "").strip(),
-        os.getenv("FAIRDATA_INDEX_DIR", "").strip(),
-    ]
-    for candidate in env_candidates:
-        if candidate:
-            return Path(candidate)
-    return Path(BASE_DIR / "index")
+    return BASE_DIR / "index"
 
 
-# 환경변수와 기본 후보 경로를 기준으로 사용할 Chroma 인덱스 디렉터리를 결정합니다.
+# dense 경로가 사용할 Chroma 인덱스 루트 디렉터리를 반환합니다.
 def resolve_chroma_index_dir() -> Path:
-    explicit_path = os.getenv("FAIRDATA_CHROMA_DIR", "").strip()
-    if explicit_path:
-        return Path(explicit_path)
     return resolve_index_root_dir() / "chroma_bgem3"
 
 
-def resolve_chroma_manifest_path() -> Path:
-    return resolve_index_root_dir() / "chroma_bgem3_manifest.json"
-
-
+# sparse 경로 인덱스 파일의 기본 루트 경로를 반환합니다.
 def resolve_sparse_index_path() -> Path:
     return resolve_index_root_dir() / "sparse_bgem3_chunks.npz"
 
 
-def resolve_sparse_manifest_path() -> Path:
-    return resolve_index_root_dir() / "sparse_bgem3_chunks_manifest.json"
-
-
+# multivector 경로 인덱스 파일의 기본 루트 경로를 반환합니다.
 def resolve_multivector_index_path() -> Path:
     return resolve_index_root_dir() / "multivector_bgem3_chunks.npz"
 
 
-def resolve_multivector_manifest_path() -> Path:
-    return resolve_index_root_dir() / "multivector_bgem3_chunks_manifest.json"
+# dense 검색 경로를 항상 사용합니다.
+def is_dense_enabled() -> bool:
+    return True
+
+
+# sparse 검색 경로를 항상 사용합니다.
+def is_sparse_enabled() -> bool:
+    return True
+
+
+# multivector 검색 경로를 항상 사용합니다.
+def is_multivector_enabled() -> bool:
+    return True
+
+
+# dense 경로가 사용할 백엔드 종류를 반환합니다.
+def resolve_dense_backend_name() -> str:
+    return DENSE_BACKEND
+
+
+# sparse 경로가 사용할 백엔드 종류를 반환합니다.
+def resolve_sparse_backend_name() -> str:
+    return SPARSE_BACKEND
+
+
+# multivector 경로가 사용할 백엔드 종류를 반환합니다.
+def resolve_multivector_backend_name() -> str:
+    return MULTIVECTOR_BACKEND
+
+
+# 융합 단계에서 RRF를 사용할지 여부를 반환합니다.
+def use_rrf_fusion() -> bool:
+    return USE_RRF_FUSION
+
+
+# dense 경로 후보 수는 호출부 기본값을 그대로 사용합니다.
+def resolve_dense_path_top_k(default_top_k: int) -> int:
+    return max(1, default_top_k)
+
+
+# sparse 경로 후보 수는 호출부 기본값을 그대로 사용합니다.
+def resolve_sparse_path_top_k(default_top_k: int) -> int:
+    return max(1, default_top_k)
+
+
+# multivector 경로 후보 수는 호출부 기본값을 그대로 사용합니다.
+def resolve_multivector_path_top_k(default_top_k: int) -> int:
+    return max(1, default_top_k)

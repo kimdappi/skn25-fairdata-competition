@@ -7,15 +7,16 @@ from pathlib import Path
 import numpy as np
 
 from app.preprocessing.corpus import CorpusStore
-from app.retrieval.bgem3 import BGEM3HybridModel
+from app.retrieval.interfaces import (
+    DenseRetrievalBackend,
+    MultiVectorRetrievalBackend,
+    SparseRetrievalBackend,
+)
 from app.retrieval.types import QueryAnalysis, RetrievalHit
 from app.utils.config import (
     resolve_chroma_index_dir,
-    resolve_chroma_manifest_path,
     resolve_multivector_index_path,
-    resolve_multivector_manifest_path,
     resolve_sparse_index_path,
-    resolve_sparse_manifest_path,
 )
 
 
@@ -30,6 +31,10 @@ def build_chunk_fingerprint(chunk_ids: list[str], chunk_texts: list[str]) -> str
         digest.update(chunk_text.encode("utf-8"))
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def sanitize_model_tag(model_dir: Path) -> str:
+    return hashlib.sha1(str(model_dir.resolve()).encode("utf-8")).hexdigest()[:12]
 
 
 def load_manifest(manifest_path: Path) -> dict:
@@ -56,15 +61,16 @@ def manifest_matches(manifest: dict, *, fingerprint: str, count: int) -> bool:
 
 class DenseSearchEngine:
     # BGE-M3 dense retrieval 경로를 초기화합니다.
-    def __init__(self, corpus_store: CorpusStore, model: BGEM3HybridModel) -> None:
+    def __init__(self, corpus_store: CorpusStore, backend: DenseRetrievalBackend) -> None:
         self.chunks = corpus_store.chunks
-        self.model = model
+        self.backend = backend
+        self.model_tag = sanitize_model_tag(self.backend.model_dir)
         self.chunk_ids = [chunk.chunk_id for chunk in self.chunks]
         self.chunk_texts = [chunk.enriched_text for chunk in self.chunks]
         self.chunk_fingerprint = build_chunk_fingerprint(self.chunk_ids, self.chunk_texts)
-        self.chroma_dir = resolve_chroma_index_dir()
-        self.manifest_path = resolve_chroma_manifest_path()
-        self.collection_name = "bgem3_dense_chunks"
+        self.chroma_dir = resolve_chroma_index_dir() / self.model_tag
+        self.manifest_path = self.chroma_dir / "manifest.json"
+        self.collection_name = f"bgem3_dense_chunks_{self.model_tag}"
         self.collection = self.build_collection()
 
     # Chroma 컬렉션을 생성하고 현재 코퍼스 기준으로 동기화합니다.
@@ -105,7 +111,7 @@ class DenseSearchEngine:
 
     # BGE-M3 dense embedding을 Chroma 컬렉션에 적재합니다.
     def populate_collection(self, collection) -> None:
-        embeddings = self.model.encode_dense(self.chunk_texts).tolist()
+        embeddings = self.backend.encode_documents(self.chunk_texts).tolist()
         documents = [chunk.content for chunk in self.chunks]
         metadatas = [
             {
@@ -125,13 +131,10 @@ class DenseSearchEngine:
 
     # dense 질의 벡터를 생성합니다.
     def encode_query(self, analysis: QueryAnalysis) -> list[float]:
-        query_matrix = self.model.encode_dense([analysis.question])
-        if len(query_matrix) == 0:
-            return []
-        return query_matrix[0].astype("float32").tolist()
+        return self.backend.encode_query(analysis.question)
 
     # dense 경로로 상위 청크 후보를 반환합니다.
-    def search(self, analysis: QueryAnalysis, *, candidate_doc_ids: set[str] | None, top_k: int) -> list[RetrievalHit]:
+    def search(self, analysis: QueryAnalysis, *, top_k: int) -> list[RetrievalHit]:
         query_vector = self.encode_query(analysis)
         if not query_vector:
             return []
@@ -146,10 +149,7 @@ class DenseSearchEngine:
         hits: list[RetrievalHit] = []
         ids = result.get("ids", [[]])[0]
         distances = result.get("distances", [[]])[0]
-        metadatas = result.get("metadatas", [[]])[0]
-        for chunk_id, distance, metadata in zip(ids, distances, metadatas):
-            if candidate_doc_ids and metadata and metadata.get("doc_id") not in candidate_doc_ids:
-                continue
+        for chunk_id, distance in zip(ids, distances):
             similarity = 1.0 / (1.0 + float(distance))
             hits.append(RetrievalHit(chunk_id=chunk_id, score=similarity, source="dense"))
             if len(hits) == top_k:
@@ -159,14 +159,16 @@ class DenseSearchEngine:
 
 class SparseSearchEngine:
     # BGE-M3 sparse retrieval 경로를 초기화합니다.
-    def __init__(self, corpus_store: CorpusStore, model: BGEM3HybridModel) -> None:
+    def __init__(self, corpus_store: CorpusStore, backend: SparseRetrievalBackend) -> None:
         self.chunks = corpus_store.chunks
-        self.model = model
+        self.backend = backend
+        self.model_tag = sanitize_model_tag(self.backend.model_dir)
         self.chunk_ids = [chunk.chunk_id for chunk in self.chunks]
         self.chunk_texts = [chunk.enriched_text for chunk in self.chunks]
         self.chunk_fingerprint = build_chunk_fingerprint(self.chunk_ids, self.chunk_texts)
-        self.index_path = resolve_sparse_index_path()
-        self.manifest_path = resolve_sparse_manifest_path()
+        sparse_root = resolve_sparse_index_path().parent
+        self.index_path = sparse_root / f"sparse_bgem3_chunks_{self.model_tag}.npz"
+        self.manifest_path = sparse_root / f"sparse_bgem3_chunks_{self.model_tag}_manifest.json"
         self.chunk_sparse_matrix = self.load_or_build_index()
 
     def load_or_build_index(self):
@@ -181,7 +183,7 @@ class SparseSearchEngine:
             return load_npz(self.index_path)
 
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        sparse_matrix = self.model.encode_sparse(self.chunk_texts)
+        sparse_matrix = self.backend.encode_documents(self.chunk_texts)
         save_npz(self.index_path, sparse_matrix)
         write_manifest(
             self.manifest_path,
@@ -197,7 +199,7 @@ class SparseSearchEngine:
 
     # sparse 질의 벡터를 생성합니다.
     def encode_query(self, analysis: QueryAnalysis):
-        return self.model.encode_sparse([analysis.question])
+        return self.backend.encode_query(analysis.question)
 
     # sparse 쿼리와 문서 행렬의 점수를 행렬곱으로 계산합니다.
     def score_all(self, query_vector) -> np.ndarray:
@@ -206,28 +208,28 @@ class SparseSearchEngine:
         return (self.chunk_sparse_matrix @ query_vector.T).toarray().ravel().astype("float32")
 
     # sparse 경로로 상위 청크 후보를 반환합니다.
-    def search(self, analysis: QueryAnalysis, *, candidate_doc_ids: set[str] | None, top_k: int) -> list[RetrievalHit]:
+    def search(self, analysis: QueryAnalysis, *, top_k: int) -> list[RetrievalHit]:
         query_vector = self.encode_query(analysis)
         scores = self.score_all(query_vector)
         hits: list[RetrievalHit] = []
         for index, score in enumerate(scores):
             chunk = self.chunks[index]
-            if candidate_doc_ids and chunk.doc_id not in candidate_doc_ids:
-                continue
             hits.append(RetrievalHit(chunk_id=chunk.chunk_id, score=float(score), source="sparse"))
         return sorted(hits, key=lambda item: (item.score, item.chunk_id), reverse=True)[:top_k]
 
 
 class MultiVectorSearchEngine:
     # BGE-M3 multi-vector retrieval 경로를 초기화합니다.
-    def __init__(self, corpus_store: CorpusStore, model: BGEM3HybridModel) -> None:
+    def __init__(self, corpus_store: CorpusStore, backend: MultiVectorRetrievalBackend) -> None:
         self.chunks = corpus_store.chunks
-        self.model = model
+        self.backend = backend
+        self.model_tag = sanitize_model_tag(self.backend.model_dir)
         self.chunk_ids = [chunk.chunk_id for chunk in self.chunks]
         self.chunk_texts = [chunk.enriched_text for chunk in self.chunks]
         self.chunk_fingerprint = build_chunk_fingerprint(self.chunk_ids, self.chunk_texts)
-        self.index_path = resolve_multivector_index_path()
-        self.manifest_path = resolve_multivector_manifest_path()
+        multivector_root = resolve_multivector_index_path().parent
+        self.index_path = multivector_root / f"multivector_bgem3_chunks_{self.model_tag}.npz"
+        self.manifest_path = multivector_root / f"multivector_bgem3_chunks_{self.model_tag}_manifest.json"
         self.chunk_multivectors = self.load_or_build_index()
 
     def load_or_build_index(self) -> list[np.ndarray]:
@@ -240,7 +242,7 @@ class MultiVectorSearchEngine:
             return self.load_multivectors(self.index_path)
 
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        multivectors = self.model.encode_multivector(self.chunk_texts)
+        multivectors = self.backend.encode_documents(self.chunk_texts)
         self.save_multivectors(self.index_path, multivectors)
         write_manifest(
             self.manifest_path,
@@ -291,30 +293,21 @@ class MultiVectorSearchEngine:
 
     # multi-vector 질의 표현을 생성합니다.
     def encode_query(self, analysis: QueryAnalysis) -> np.ndarray:
-        vectors = self.model.encode_multivector([analysis.question])
-        if not vectors:
-            return np.zeros((0, 0), dtype="float32")
-        return vectors[0]
-
-    # 특정 청크의 multi-vector 표현을 조회합니다.
-    def get_chunk_vectors(self, chunk_index: int) -> np.ndarray:
-        return self.chunk_multivectors[chunk_index]
+        return self.backend.encode_query(analysis.question)
 
     # late interaction 점수로 전체 후보를 계산합니다.
     def score_all(self, query_vectors: np.ndarray) -> list[float]:
         scores: list[float] = []
         for doc_vectors in self.chunk_multivectors:
-            scores.append(float(self.model.multivector_score(query_vectors, doc_vectors)))
+            scores.append(self.backend.score(query_vectors, doc_vectors))
         return scores
 
     # late interaction 점수로 상위 청크 후보를 반환합니다.
-    def search(self, analysis: QueryAnalysis, *, candidate_doc_ids: set[str] | None, top_k: int) -> list[RetrievalHit]:
+    def search(self, analysis: QueryAnalysis, *, top_k: int) -> list[RetrievalHit]:
         query_vectors = self.encode_query(analysis)
         scores = self.score_all(query_vectors)
         hits: list[RetrievalHit] = []
         for index, score in enumerate(scores):
             chunk = self.chunks[index]
-            if candidate_doc_ids and chunk.doc_id not in candidate_doc_ids:
-                continue
             hits.append(RetrievalHit(chunk_id=chunk.chunk_id, score=float(score), source="multivector"))
         return sorted(hits, key=lambda item: (item.score, item.chunk_id), reverse=True)[:top_k]

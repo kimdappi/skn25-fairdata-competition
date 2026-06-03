@@ -4,29 +4,45 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
+from urllib.request import Request, urlopen
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-from app.evaluation.metrics import evaluate_predictions, load_eval_dataset
-from app.generation.generator import GroundedGenerator
-from app.preprocessing.corpus import load_corpus
-from app.retrieval.retriever import HybridRetriever
-from app.retrieval.router import QueryRouter
-from app.utils.config import resolve_data_dir
+from app.evaluation.metrics import (
+    compute_mrr,
+    compute_recall_at_5,
+    compute_token_f1,
+    evaluate_predictions,
+    load_eval_dataset,
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="가이드 기준 Recall@5, MRR, F1, BERTScore를 로컬 평가셋으로 계산합니다."
+        description="server.py의 /predict를 호출해 가이드 기준 로컬 평가를 계산합니다."
     )
     parser.add_argument("--eval-file", required=True, help="JSONL 평가셋 경로")
     parser.add_argument(
-        "--output-file",
-        default="",
-        help="문항별 예측 결과를 JSONL로 저장할 경로",
+        "--base-url",
+        default="http://127.0.0.1:8000",
+        help="호출할 server.py 서버 주소",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="각 /predict 요청 타임아웃(초)",
+    )
+    parser.add_argument(
+        "--results-dir",
+        default=str(PROJECT_DIR / "results"),
+        help="종합 지표와 문항별 예측 결과를 저장할 디렉터리",
     )
     parser.add_argument(
         "--limit",
@@ -43,6 +59,47 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def build_predictor(base_url: str, timeout: float):
+    predict_url = urljoin(base_url.rstrip("/") + "/", "predict")
+
+    def predict(example_id: str, question: str) -> dict[str, Any]:
+        payload = json.dumps({"id": example_id, "question": question}, ensure_ascii=False).encode("utf-8")
+        request = Request(
+            predict_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                body = response.read().decode("utf-8")
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"API request failed with HTTP {exc.code}: {detail}") from exc
+        except URLError as exc:
+            raise RuntimeError(f"API request failed: {exc}") from exc
+
+        data = json.loads(body)
+        missing_keys = {"id", "retrieved_chunk_ids", "answer"} - data.keys()
+        if missing_keys:
+            missing = ", ".join(sorted(missing_keys))
+            raise ValueError(f"API response missing keys: {missing}")
+        return data
+
+    return predict
+
+
+def build_result_paths(results_dir: Path, eval_path: Path, offset: int, limit: int) -> tuple[Path, Path, Path]:
+    stem = eval_path.stem
+    suffix_parts = [f"offset{offset}"]
+    suffix_parts.append(f"limit{limit}" if limit > 0 else "limitall")
+    run_name = f"{stem}_{'_'.join(suffix_parts)}"
+    run_dir = results_dir / run_name
+    summary_path = run_dir / "summary.json"
+    predictions_path = run_dir / "predictions.jsonl"
+    return run_dir, summary_path, predictions_path
+
+
 def main() -> None:
     args = parse_args()
     eval_path = Path(args.eval_file).resolve()
@@ -56,16 +113,22 @@ def main() -> None:
     if args.limit > 0:
         examples = examples[: args.limit]
 
-    router = QueryRouter()
-    corpus = load_corpus(resolve_data_dir(), router.route_from_text)
-    retriever = HybridRetriever(corpus, router)
-    generator = GroundedGenerator()
+    predict = build_predictor(args.base_url, args.timeout)
+    results_dir = Path(args.results_dir).resolve()
+    results_dir.mkdir(parents=True, exist_ok=True)
+    run_dir, summary_path, predictions_path = build_result_paths(
+        results_dir, eval_path, args.offset, args.limit
+    )
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[dict] = []
     for index, example in enumerate(examples, start=1):
-        chunks = retriever.search(example.question, top_k=5)
-        predicted_chunk_ids = [chunk.chunk_id for chunk in chunks]
-        predicted_answer = generator.generate(example.question, chunks)
+        prediction = predict(example.id, example.question)
+        predicted_chunk_ids = [str(chunk_id) for chunk_id in prediction["retrieved_chunk_ids"]]
+        predicted_answer = str(prediction["answer"])
+        recall_at_5 = compute_recall_at_5(predicted_chunk_ids, example.gold_chunk_ids)
+        mrr = compute_mrr(predicted_chunk_ids, example.gold_chunk_ids)
+        token_f1 = compute_token_f1(predicted_answer, example.gold_answer)
         rows.append(
             {
                 "id": example.id,
@@ -74,6 +137,9 @@ def main() -> None:
                 "gold_answer": example.gold_answer,
                 "predicted_chunk_ids": predicted_chunk_ids,
                 "predicted_answer": predicted_answer,
+                "recall_at_5": recall_at_5,
+                "mrr": mrr,
+                "token_f1": token_f1,
             }
         )
         print(
@@ -82,15 +148,21 @@ def main() -> None:
         )
 
     summary = evaluate_predictions(rows)
+    summary["eval_file"] = str(eval_path)
+    summary["base_url"] = args.base_url
+    summary["offset"] = args.offset
+    summary["limit"] = args.limit
+    summary["results_dir"] = str(results_dir)
+    summary["run_dir"] = str(run_dir)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
-    if args.output_file:
-        output_path = Path(args.output_file).resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("w", encoding="utf-8") as fp:
-            for row in rows:
-                fp.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(f"[evaluate_local] wrote predictions: {output_path}")
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with predictions_path.open("w", encoding="utf-8") as fp:
+        for row in rows:
+            fp.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    print(f"[evaluate_local] wrote summary: {summary_path}")
+    print(f"[evaluate_local] wrote predictions: {predictions_path}")
 
 
 if __name__ == "__main__":

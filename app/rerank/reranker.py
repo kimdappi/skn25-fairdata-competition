@@ -48,19 +48,6 @@ class BGERerankerV2M3:
                 boost += 2.0
         return boost
 
-    # 라우팅 메타데이터와 문서 메타데이터의 일치 여부를 재정렬 점수에 반영합니다.
-    def route_boost(self, analysis: QueryAnalysis, document: Document) -> float:
-        boost = 0.0
-        if analysis.route.theme != "기타" and analysis.route.theme == document.route.theme:
-            boost += 1.5
-        if analysis.route.company_size != "기타" and analysis.route.company_size == document.route.company_size:
-            boost += 0.8
-        if analysis.route.legal_role != "기타" and analysis.route.legal_role == document.route.legal_role:
-            boost += 0.8
-        if analysis.route.industry != "기타" and analysis.route.industry == document.route.industry:
-            boost += 0.8
-        return boost
-
     # reranker 모델이 사용할 text pair 입력을 구성합니다.
     def build_pair_text(self, analysis: QueryAnalysis, chunk_id: str) -> tuple[str, str] | None:
         chunk = self.corpus_store.chunk_map.get(chunk_id)
@@ -131,7 +118,6 @@ class BGERerankerV2M3:
                 "fusion": fused_score,
                 "reranker": rerank_map.get(chunk_id, 0.0),
                 "entity": self.entity_boost(analysis, document),
-                "route": self.route_boost(analysis, document),
             }
             final_score = sum(reason_scores.values())
             reasons = tuple(name for name, score in reason_scores.items() if score > 0)
