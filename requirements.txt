@@ -6,6 +6,8 @@
 # Core orchestration / schema
 langgraph==1.0.10
 pydantic==2.11.10
+fastapi==0.121.0
+uvicorn==0.38.0
 
 # Retrieval
 faiss-cpu==1.13.2

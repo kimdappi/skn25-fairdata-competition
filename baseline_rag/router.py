@@ -79,6 +79,7 @@ class QueryRouter:
         )
         self.local_model_path = self._resolve_local_router_model_path(self.model_name)
         self.hf_model_path = self._resolve_local_router_model_path(self.hf_model_name)
+        self.allow_cpu = os.getenv("FAIRCOMP_ROUTER_ALLOW_CPU", "false").lower() in {"1", "true", "yes", "on"}
         self.local_tokenizer = None
         self.local_model = None
 
@@ -215,6 +216,11 @@ class QueryRouter:
             )
             model_kwargs = {"local_files_only": local_files_only}
             device = require_runtime_device()
+            if device.type != "cuda" and not self.allow_cpu:
+                self._log_router(f"Skipping router model load on CPU for model={model_name_or_path}")
+                self.local_tokenizer = None
+                self.local_model = None
+                return False
             if device.type == "cuda":
                 model_kwargs["device_map"] = "auto"
                 model_kwargs["torch_dtype"] = preferred_torch_dtype()
