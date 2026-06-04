@@ -158,7 +158,7 @@ class DenseSearchEngine:
 
 
 class SparseSearchEngine:
-    # BGE-M3 sparse retrieval 경로를 초기화합니다.
+    # learned sparse(BGE-M3) 또는 BM25 sparse retrieval 경로를 초기화합니다.
     def __init__(self, corpus_store: CorpusStore, backend: SparseRetrievalBackend) -> None:
         self.chunks = corpus_store.chunks
         self.backend = backend
@@ -166,46 +166,43 @@ class SparseSearchEngine:
         self.chunk_ids = [chunk.chunk_id for chunk in self.chunks]
         self.chunk_texts = [chunk.enriched_text for chunk in self.chunks]
         self.chunk_fingerprint = build_chunk_fingerprint(self.chunk_ids, self.chunk_texts)
+        self.backend_tag = self.backend.__class__.__name__.lower().replace("backend", "")
         sparse_root = resolve_sparse_index_path().parent
-        self.index_path = sparse_root / f"sparse_bgem3_chunks_{self.model_tag}.npz"
-        self.manifest_path = sparse_root / f"sparse_bgem3_chunks_{self.model_tag}_manifest.json"
-        self.chunk_sparse_matrix = self.load_or_build_index()
+        self.index_path = sparse_root / f"sparse_{self.backend_tag}_chunks_{self.model_tag}.npz"
+        self.manifest_path = sparse_root / f"sparse_{self.backend_tag}_chunks_{self.model_tag}_manifest.json"
+        self.chunk_sparse_index = self.load_or_build_index()
 
     def load_or_build_index(self):
-        from scipy.sparse import load_npz, save_npz
-
         manifest = load_manifest(self.manifest_path)
         if self.index_path.exists() and manifest_matches(
             manifest,
             fingerprint=self.chunk_fingerprint,
             count=len(self.chunks),
         ):
-            return load_npz(self.index_path)
+            return self.backend.load_index(self.index_path)
 
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        sparse_matrix = self.backend.encode_documents(self.chunk_texts)
-        save_npz(self.index_path, sparse_matrix)
+        sparse_index = self.backend.encode_documents(self.chunk_texts)
+        self.backend.save_index(self.index_path, sparse_index)
         write_manifest(
             self.manifest_path,
             {
                 "format_version": INDEX_FORMAT_VERSION,
-                "engine": "sparse",
+                "engine": f"sparse_{self.backend_tag}",
                 "chunk_count": len(self.chunks),
                 "fingerprint": self.chunk_fingerprint,
                 "index_file": self.index_path.name,
             },
         )
-        return sparse_matrix
+        return sparse_index
 
     # sparse 질의 벡터를 생성합니다.
     def encode_query(self, analysis: QueryAnalysis):
         return self.backend.encode_query(analysis.question)
 
-    # sparse 쿼리와 문서 행렬의 점수를 행렬곱으로 계산합니다.
+    # sparse 쿼리와 문서 인덱스의 점수를 backend별 방식으로 계산합니다.
     def score_all(self, query_vector) -> np.ndarray:
-        if query_vector.shape[1] == 0 or self.chunk_sparse_matrix.shape[1] == 0:
-            return np.zeros((0,), dtype="float32")
-        return (self.chunk_sparse_matrix @ query_vector.T).toarray().ravel().astype("float32")
+        return self.backend.score_all(self.chunk_sparse_index, query_vector)
 
     # sparse 경로로 상위 청크 후보를 반환합니다.
     def search(self, analysis: QueryAnalysis, *, top_k: int) -> list[RetrievalHit]:

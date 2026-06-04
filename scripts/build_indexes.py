@@ -26,17 +26,21 @@ from app.utils.config import (
     resolve_index_root_dir,
     resolve_multivector_backend_name,
     resolve_multivector_model_dir,
+    resolve_retrieval_profile,
     resolve_sparse_backend_name,
     resolve_sparse_model_dir,
+    validate_retrieval_configuration,
 )
 
 
 def main() -> None:
+    validate_retrieval_configuration()
     data_dir = resolve_data_dir()
     index_dir = resolve_index_root_dir()
 
     print(f"[build_indexes] data_dir={data_dir}")
     print(f"[build_indexes] index_dir={index_dir}")
+    print(f"[build_indexes] retrieval_profile={resolve_retrieval_profile()}")
 
     router = QueryRouter()
     corpus = load_corpus(data_dir, router.route_from_text)

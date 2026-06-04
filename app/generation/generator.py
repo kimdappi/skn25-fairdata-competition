@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import os
+from typing import Protocol
 
 import torch
 
 from app.preprocessing.corpus import Chunk
-from app.utils.config import resolve_qwen_model_dir
+from app.utils.config import resolve_llm_backend_name, resolve_llm_model_dir
 
 
-# 본문에서 사람이 읽을 수 있는 첫 유효 문장을 추출합니다.
 def select_representative_line(content: str) -> str:
+    # 본문에서 사람이 읽을 수 있는 첫 유효 문장을 추출합니다.
     for raw_line in content.splitlines():
         line = raw_line.strip()
         if line:
@@ -17,28 +18,33 @@ def select_representative_line(content: str) -> str:
     return ""
 
 
-class GroundedGenerator:
-    # 검색된 청크를 기반으로 근거 중심 답변 생성기를 초기화합니다.
+class LLMBackend(Protocol):
+    # 생성 백엔드가 서버에 제공해야 하는 최소 인터페이스입니다.
+    def generate(self, question: str, chunks: list[Chunk]) -> str: ...
+
+
+class BaseGroundedCausalLMBackend:
+    # causal LM 계열 생성 백엔드가 공유하는 프롬프트/추론 공통부입니다.
     def __init__(self, max_evidence_items: int = 3) -> None:
         self.max_evidence_items = max_evidence_items
-        self.model_dir = resolve_qwen_model_dir()
+        self.model_dir = resolve_llm_model_dir()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = None
         self.model = None
         self.max_input_chars = int(os.getenv("FAIRDATA_GENERATION_MAX_INPUT_CHARS", "6000"))
         self.max_new_tokens = int(os.getenv("FAIRDATA_GENERATION_MAX_NEW_TOKENS", "256"))
 
-    # 실제 생성이 호출될 때 Qwen 모델을 지연 초기화합니다.
     def ensure_runtime(self) -> None:
         if self.model is not None and self.tokenizer is not None:
             return
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError as exc:
-            raise ImportError("Qwen 생성 모델을 사용하려면 transformers 패키지가 필요합니다.") from exc
+            raise ImportError(
+                f"{self.__class__.__name__}를 사용하려면 transformers 패키지가 필요합니다."
+            ) from exc
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir, local_files_only=True)
-
         model_kwargs = {"local_files_only": True}
         if self.device.type == "cuda":
             model_kwargs["torch_dtype"] = torch.float16
@@ -46,7 +52,6 @@ class GroundedGenerator:
         self.model.eval()
         self.model.to(self.device)
 
-    # 검색 청크를 Qwen 입력용 근거 텍스트로 정리합니다.
     def build_context(self, chunks: list[Chunk]) -> str:
         sections: list[str] = []
         for chunk in chunks[: self.max_evidence_items]:
@@ -62,11 +67,8 @@ class GroundedGenerator:
                 if part
             )
             sections.append(section)
+        return "\n\n".join(sections).strip()[: self.max_input_chars]
 
-        context = "\n\n".join(sections).strip()
-        return context[: self.max_input_chars]
-
-    # Qwen chat template용 메시지를 구성합니다.
     def build_messages(self, question: str, chunks: list[Chunk]) -> list[dict[str, str]]:
         context = self.build_context(chunks)
         system_prompt = (
@@ -90,13 +92,11 @@ class GroundedGenerator:
             {"role": "user", "content": user_prompt},
         ]
 
-    # 모델 출력에서 프롬프트 이후 생성 텍스트만 추출합니다.
     def decode_generated_text(self, input_ids: torch.Tensor, generated_ids: torch.Tensor) -> str:
         prompt_length = int(input_ids.shape[-1])
         completion_ids = generated_ids[0][prompt_length:]
         return self.tokenizer.decode(completion_ids, skip_special_tokens=True).strip()
 
-    # 상위 청크 근거를 바탕으로 간결한 답변 문장을 구성합니다.
     def generate(self, question: str, chunks: list[Chunk]) -> str:
         if not chunks:
             return "질문과 직접 연결되는 근거 청크를 찾지 못했습니다."
@@ -141,3 +141,37 @@ class GroundedGenerator:
                 f"{representative_line} (근거: {chunk.chunk_id}, 문서: {chunk.doc_name})"
             )
         return "\n".join(evidence_lines).strip() or "생성 결과가 비어 있습니다."
+
+
+class QwenBackend(BaseGroundedCausalLMBackend):
+    # 현재 제출 기준 기본 생성 백엔드입니다.
+    pass
+
+
+class ExaoneBackend(BaseGroundedCausalLMBackend):
+    # EXAONE 계열 비교 실험용 생성 백엔드입니다.
+    pass
+
+
+class Llama3Backend(BaseGroundedCausalLMBackend):
+    # Llama 계열 비교 실험용 생성 백엔드입니다.
+    pass
+
+
+def build_llm_backend() -> LLMBackend:
+    backend_name = resolve_llm_backend_name().strip().lower().replace("-", "").replace("_", "")
+    if backend_name == "qwen":
+        return QwenBackend()
+    if backend_name == "exaone":
+        return ExaoneBackend()
+    if backend_name in {"llama3", "llama31"}:
+        return Llama3Backend()
+    raise ValueError(
+        "Unsupported LLM backend: "
+        f"{resolve_llm_backend_name()}. Supported: qwen, exaone, llama3"
+    )
+
+
+class GroundedGenerator(QwenBackend):
+    # 기존 import 호환성을 위해 Qwen 기본 구현 이름을 유지합니다.
+    pass

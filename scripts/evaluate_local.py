@@ -22,22 +22,51 @@ from app.evaluation.metrics import (
     evaluate_predictions,
     load_eval_dataset,
 )
+from app.utils.config import (
+    is_dense_enabled,
+    is_multivector_enabled,
+    is_sparse_enabled,
+    resolve_bge_reranker_model_dir,
+    resolve_dense_backend_name,
+    resolve_dense_model_dir,
+    resolve_index_namespace,
+    resolve_llm_backend_name,
+    resolve_llm_model_dir,
+    resolve_multivector_backend_name,
+    resolve_multivector_model_dir,
+    resolve_reranker_backend_name,
+    resolve_reranker_top_n,
+    resolve_reranker_weight,
+    resolve_retrieval_profile,
+    resolve_sparse_backend_name,
+    resolve_sparse_backend_kind,
+    resolve_sparse_model_dir,
+)
 
 
 def collect_config_snapshot() -> dict[str, Any]:
     """현재 실험 구동 시점의 env 설정을 스냅샷으로 수집합니다."""
     return {
         "experiment_tag": os.getenv("FAIRDATA_EXPERIMENT_TAG", ""),
-        "embed_backend": os.getenv("FAIRDATA_DENSE_BACKEND", "bgem3"),
-        "enable_dense": os.getenv("FAIRDATA_ENABLE_DENSE", "1") == "1",
-        "enable_sparse": os.getenv("FAIRDATA_ENABLE_SPARSE", "1") == "1",
-        "enable_multivector": os.getenv("FAIRDATA_ENABLE_MULTIVECTOR", "1") == "1",
-        "index_namespace": os.getenv("FAIRDATA_INDEX_NAMESPACE", ""),
-        "rerank_backend": os.getenv("FAIRDATA_RERANK_BACKEND", "bge_reranker"),
-        "rerank_top_n": int(os.getenv("FAIRDATA_RERANK_TOP_N", "50")),
-        "rerank_weight": float(os.getenv("FAIRDATA_RERANK_WEIGHT", "1.0")),
-        "llm_backend": os.getenv("FAIRDATA_LLM_BACKEND", "qwen"),
-        "llm_model_dir": os.getenv("FAIRDATA_LLM_MODEL_DIR", ""),
+        "embed_backend": resolve_dense_backend_name(),
+        "dense_model_dir": str(resolve_dense_model_dir()),
+        "sparse_backend": resolve_sparse_backend_name(),
+        "sparse_backend_kind": resolve_sparse_backend_kind(),
+        "sparse_model_dir": str(resolve_sparse_model_dir()),
+        "multivector_backend": resolve_multivector_backend_name(),
+        "multivector_model_dir": str(resolve_multivector_model_dir()),
+        "enable_dense": is_dense_enabled(),
+        "enable_sparse": is_sparse_enabled(),
+        "enable_multivector": is_multivector_enabled(),
+        "retrieval_profile": resolve_retrieval_profile(),
+        "index_namespace": resolve_index_namespace(),
+        "rerank_backend": resolve_reranker_backend_name(),
+        "rerank_model_dir": str(resolve_bge_reranker_model_dir()),
+        "rerank_top_n": resolve_reranker_top_n(),
+        "rerank_weight": resolve_reranker_weight(),
+        "llm_backend": resolve_llm_backend_name(),
+        "llm_model_dir": str(resolve_llm_model_dir()),
+        "predict_io_contract": "id,retrieved_chunk_ids,answer",
     }
 
 

@@ -9,16 +9,16 @@ from app.retrieval.types import QueryAnalysis, RankedChunk
 from app.utils.text import normalize_name
 
 
-class BGERerankerV2M3:
-    # BGE reranker v2 m3 cross-encoder와 메타데이터 보정기를 초기화합니다.
+class TransformerSequenceClassificationReranker:
+    # cross-encoder 계열 리랭커 구현이 공유하는 공통 본체입니다.
     def __init__(self, corpus_store: CorpusStore, model_dir: Path) -> None:
         self.corpus_store = corpus_store
         self.model_dir = Path(model_dir)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = None
         self.model = None
+        self.rerank_weight = 1.0
 
-    # 실제 재정렬이 호출될 때 reranker 모델을 지연 초기화합니다.
     def ensure_runtime(self) -> None:
         if self.model is not None and self.tokenizer is not None:
             return
@@ -26,7 +26,7 @@ class BGERerankerV2M3:
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
         except ImportError as exc:
             raise ImportError(
-                "bge-reranker-v2-m3를 사용하려면 transformers 패키지가 필요합니다."
+                f"{self.__class__.__name__}를 사용하려면 transformers 패키지가 필요합니다."
             ) from exc
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir, local_files_only=True)
@@ -37,7 +37,6 @@ class BGERerankerV2M3:
         self.model.eval()
         self.model.to(self.device)
 
-    # 질문에 등장한 회사명과 문서명이 일치하면 추가 가중치를 부여합니다.
     def entity_boost(self, analysis: QueryAnalysis, document: Document) -> float:
         boost = 0.0
         if document.normalized_doc_name and document.normalized_doc_name in analysis.normalized_question:
@@ -48,7 +47,6 @@ class BGERerankerV2M3:
                 boost += 2.0
         return boost
 
-    # reranker 모델이 사용할 text pair 입력을 구성합니다.
     def build_pair_text(self, analysis: QueryAnalysis, chunk_id: str) -> tuple[str, str] | None:
         chunk = self.corpus_store.chunk_map.get(chunk_id)
         if chunk is None:
@@ -65,7 +63,6 @@ class BGERerankerV2M3:
         )
         return analysis.question, passage
 
-    # cross-encoder reranker 점수를 한 번에 계산합니다.
     @torch.inference_mode()
     def score_pairs(self, pairs: list[tuple[str, str]]) -> list[float]:
         self.ensure_runtime()
@@ -81,10 +78,11 @@ class BGERerankerV2M3:
         )
         encoded = {key: value.to(self.device) for key, value in encoded.items()}
         output = self.model(**encoded)
-        logits = output.logits.view(-1).float().cpu().tolist()
-        return [float(score) for score in logits]
+        logits = output.logits
+        if logits.ndim > 1:
+            logits = logits[:, 0]
+        return [float(score) for score in logits.view(-1).float().cpu().tolist()]
 
-    # 융합 점수 상위 후보에 reranker 점수를 더해 최종 순위를 만듭니다.
     def rerank_chunks(
         self,
         analysis: QueryAnalysis,
@@ -116,10 +114,35 @@ class BGERerankerV2M3:
             document = self.corpus_store.document_map[chunk.doc_id]
             reason_scores = {
                 "fusion": fused_score,
-                "reranker": rerank_map.get(chunk_id, 0.0),
+                "reranker": rerank_map.get(chunk_id, 0.0) * self.rerank_weight,
                 "entity": self.entity_boost(analysis, document),
             }
             final_score = sum(reason_scores.values())
             reasons = tuple(name for name, score in reason_scores.items() if score > 0)
             ranked_chunks.append(RankedChunk(chunk=chunk, score=final_score, reasons=reasons))
         return sorted(ranked_chunks, key=lambda item: (item.score, item.chunk.chunk_id), reverse=True)
+
+
+class BGERerankerV2M3(TransformerSequenceClassificationReranker):
+    # 기존 기본 리랭커를 별도 이름으로 유지합니다.
+    pass
+
+
+class BGERerankerV25Gemma2(TransformerSequenceClassificationReranker):
+    # BGE v2.5 gemma2 계열 비교군입니다.
+    pass
+
+
+class JinaRerankerV3(TransformerSequenceClassificationReranker):
+    # jina reranker v3 비교군입니다.
+    pass
+
+
+class MiniLMReranker(TransformerSequenceClassificationReranker):
+    # MiniLM 계열 경량 리랭커 비교군입니다.
+    pass
+
+
+class KoReranker(TransformerSequenceClassificationReranker):
+    # 한국어 특화 리랭커 비교군입니다.
+    pass

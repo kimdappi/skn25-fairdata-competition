@@ -17,8 +17,9 @@ from app.retrieval.interfaces import (
     SparseRetrievalBackend,
 )
 from app.retrieval.router import QueryRouter
-from app.retrieval.types import QueryAnalysis, RetrievalHit, RetrievalTrace
+from app.retrieval.types import QueryAnalysis, RankedChunk, RetrievalHit, RetrievalTrace
 from app.utils.config import (
+    get_backend_capabilities,
     is_dense_enabled,
     is_multivector_enabled,
     is_sparse_enabled,
@@ -33,7 +34,11 @@ from app.utils.config import (
     resolve_sparse_model_dir,
     resolve_sparse_path_top_k,
     resolve_reranker_backend_name,
+    resolve_reranker_top_n,
+    resolve_reranker_weight,
+    resolve_retrieval_profile,
     use_rrf_fusion,
+    validate_retrieval_configuration,
 )
 from app.utils.text import normalize_name, tokenize_text
 
@@ -142,6 +147,10 @@ class HybridSearchPipeline:
         self.enable_sparse = is_sparse_enabled()
         self.enable_multivector = is_multivector_enabled()
         self.use_rrf = use_rrf_fusion()
+        self.rerank_top_n = resolve_reranker_top_n()
+        self.rerank_weight = resolve_reranker_weight()
+        self.retrieval_profile = resolve_retrieval_profile()
+        validate_retrieval_configuration()
 
         if not any([self.enable_dense, self.enable_sparse, self.enable_multivector]):
             raise ValueError("At least one retrieval path must be enabled.")
@@ -159,6 +168,11 @@ class HybridSearchPipeline:
             )
             self.dense_engine = DenseSearchEngine(self.corpus_store, self.dense_backend)
         if self.enable_sparse:
+            sparse_caps = get_backend_capabilities(resolve_sparse_backend_name())
+            if not sparse_caps["sparse"]:
+                raise ValueError(
+                    f"Sparse backend '{resolve_sparse_backend_name()}' does not support sparse retrieval."
+                )
             self.sparse_backend = build_sparse_backend(
                 resolve_sparse_backend_name(),
                 resolve_sparse_model_dir(),
@@ -166,6 +180,12 @@ class HybridSearchPipeline:
             )
             self.sparse_engine = SparseSearchEngine(self.corpus_store, self.sparse_backend)
         if self.enable_multivector:
+            multivector_caps = get_backend_capabilities(resolve_multivector_backend_name())
+            if not multivector_caps["multivector"]:
+                raise ValueError(
+                    "Multi-vector backend "
+                    f"'{resolve_multivector_backend_name()}' does not support multi-vector retrieval."
+                )
             self.multivector_backend = build_multivector_backend(
                 resolve_multivector_backend_name(),
                 resolve_multivector_model_dir(),
@@ -177,6 +197,8 @@ class HybridSearchPipeline:
             self.corpus_store,
             resolve_bge_reranker_model_dir(),
         )
+        if hasattr(self.reranker, "rerank_weight"):
+            self.reranker.rerank_weight = self.rerank_weight
 
     # 질문을 토큰과 라우팅 메타데이터로 분석합니다.
     def analyze_query(self, question: str) -> QueryAnalysis:
@@ -229,10 +251,10 @@ class HybridSearchPipeline:
                 for name, hits in active_path_hits.items()
             }
             fused_scores = self.fusion.fuse(rankings, weights)
-            trace_source = "rrf_route"
+            trace_source = f"rrf_{self.retrieval_profile}"
         else:
             fused_scores = self.score_fusion.fuse(active_path_hits, weights)
-            trace_source = "score_route"
+            trace_source = f"score_{self.retrieval_profile}"
         for chunk_id in list(fused_scores.keys()):
             chunk = self.corpus_store.chunk_map.get(chunk_id)
             if chunk is None:
@@ -253,5 +275,25 @@ class HybridSearchPipeline:
         analysis = self.analyze_query(question)
         trace = self.run_retrieval_paths(analysis, top_k=top_k)
         fused_scores = self.fuse_hits(analysis, trace)
-        reranked_chunks = self.reranker.rerank_chunks(analysis, fused_scores, top_n=max(top_k * 10, 50))
+        if self.rerank_weight <= 0:
+            ranked_chunks = [
+                RankedChunk(
+                    chunk=self.corpus_store.chunk_map[chunk_id],
+                    score=score,
+                    reasons=("fusion",),
+                )
+                for chunk_id, score in sorted(
+                    fused_scores.items(),
+                    key=lambda item: (item[1], item[0]),
+                    reverse=True,
+                )
+                if chunk_id in self.corpus_store.chunk_map
+            ]
+            return ensure_top_k_chunks(self.corpus_store, ranked_chunks, top_k)
+
+        reranked_chunks = self.reranker.rerank_chunks(
+            analysis,
+            fused_scores,
+            top_n=max(top_k * 10, self.rerank_top_n),
+        )
         return ensure_top_k_chunks(self.corpus_store, reranked_chunks, top_k)
