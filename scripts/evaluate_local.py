@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,23 @@ from app.evaluation.metrics import (
     evaluate_predictions,
     load_eval_dataset,
 )
+
+
+def collect_config_snapshot() -> dict[str, Any]:
+    """현재 실험 구동 시점의 env 설정을 스냅샷으로 수집합니다."""
+    return {
+        "experiment_tag": os.getenv("FAIRDATA_EXPERIMENT_TAG", ""),
+        "embed_backend": os.getenv("FAIRDATA_DENSE_BACKEND", "bgem3"),
+        "enable_dense": os.getenv("FAIRDATA_ENABLE_DENSE", "1") == "1",
+        "enable_sparse": os.getenv("FAIRDATA_ENABLE_SPARSE", "1") == "1",
+        "enable_multivector": os.getenv("FAIRDATA_ENABLE_MULTIVECTOR", "1") == "1",
+        "index_namespace": os.getenv("FAIRDATA_INDEX_NAMESPACE", ""),
+        "rerank_backend": os.getenv("FAIRDATA_RERANK_BACKEND", "bge_reranker"),
+        "rerank_top_n": int(os.getenv("FAIRDATA_RERANK_TOP_N", "50")),
+        "rerank_weight": float(os.getenv("FAIRDATA_RERANK_WEIGHT", "1.0")),
+        "llm_backend": os.getenv("FAIRDATA_LLM_BACKEND", "qwen"),
+        "llm_model_dir": os.getenv("FAIRDATA_LLM_MODEL_DIR", ""),
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,6 +73,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="앞에서부터 건너뛸 문항 수. 기본값은 0입니다.",
+    )
+    parser.add_argument(
+        "--experiment-tag",
+        default=os.getenv("FAIRDATA_EXPERIMENT_TAG", ""),
+        help="실험 식별 태그 (env FAIRDATA_EXPERIMENT_TAG 보다 우선).",
     )
     return parser.parse_args()
 
@@ -147,7 +170,17 @@ def main() -> None:
             f"retrieved={predicted_chunk_ids}"
         )
 
-    summary = evaluate_predictions(rows)
+    # ── 실험 설정 스냅샷 수집 + experiment_tag 주입 ──────────────────
+    experiment_tag = args.experiment_tag or os.getenv("FAIRDATA_EXPERIMENT_TAG", "")
+    config_snapshot = collect_config_snapshot()
+    config_snapshot["eval_file"] = str(eval_path)
+    config_snapshot["base_url"] = args.base_url
+
+    summary = evaluate_predictions(
+        rows,
+        experiment_tag=experiment_tag,
+        config_snapshot=config_snapshot,
+    )
     summary["eval_file"] = str(eval_path)
     summary["base_url"] = args.base_url
     summary["offset"] = args.offset

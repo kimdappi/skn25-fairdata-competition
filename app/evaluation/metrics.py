@@ -4,12 +4,64 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from app.utils.config import (
+    DENSE_BACKEND,
+    LLM_BACKEND,
+    RERANK_BACKEND,
+    RERANK_TOP_N,
+    RERANK_WEIGHT,
+    resolve_index_namespace,
+)
 
 
 _WHITESPACE_RE = re.compile(r"\s+")
 _PUNCT_RE = re.compile(r"[^\w가-힣]+", re.UNICODE)
+
+# ── config_snapshot 정규화: 재현성에 필요한 키만 필터링 ──────────────────
+_SNAPSHOT_KEYS: frozenset[str] = frozenset({
+    "experiment_tag",
+    "embed_backend",
+    "enable_dense",
+    "enable_sparse",
+    "enable_multivector",
+    "index_namespace",
+    "rerank_backend",
+    "rerank_top_n",
+    "rerank_weight",
+    "llm_backend",
+    "llm_model_dir",
+    "max_new_tokens",
+    "prompt_version",
+    "eval_file",
+    "base_url",
+})
+
+
+def _normalize_snapshot(raw: dict[str, Any] | None) -> dict[str, Any]:
+    """실험 설정 중 재현성에 필요한 키만 필터링하여 반환합니다."""
+    if raw is None:
+        return {}
+    return {k: v for k, v in raw.items() if k in _SNAPSHOT_KEYS}
+
+
+
+def _auto_config_snapshot() -> dict[str, Any]:
+    """config.py 의 현재 값으로 config_snapshot 을 자동 구성합니다."""
+    return {
+        "embed_backend": DENSE_BACKEND,
+        "enable_dense": True,
+        "enable_sparse": True,
+        "enable_multivector": True,
+        "index_namespace": resolve_index_namespace(),
+        "rerank_backend": RERANK_BACKEND,
+        "rerank_top_n": RERANK_TOP_N,
+        "rerank_weight": RERANK_WEIGHT,
+        "llm_backend": LLM_BACKEND,
+    }
 
 
 @dataclass(frozen=True)
@@ -171,7 +223,29 @@ def load_eval_dataset_from_json(dataset_path: Path, text: str) -> list[EvalExamp
     return examples
 
 
-def evaluate_predictions(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def evaluate_predictions(
+    rows: list[dict[str, Any]],
+    *,
+    experiment_tag: str = "",
+    config_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """rows 를 평가하고 종합 지표 + 실험 설정 스냅샷을 반환합니다.
+
+    Parameters
+    ----------
+    rows:
+        각 row 는 ``predicted_chunk_ids``, ``gold_chunk_ids``,
+        ``predicted_answer``, ``gold_answer`` 키를 포함해야 합니다.
+    experiment_tag:
+        실험 식별 태그 (예: ``"E3_e5_dense"``).
+    config_snapshot:
+        실험에 사용한 설정 딕셔너리. 생략하거나 ``None`` 이면
+        ``config.py`` 의 현재 값으로 자동 구성합니다.
+    """
+    normalized_snapshot = _normalize_snapshot(config_snapshot)
+    if not normalized_snapshot:
+        normalized_snapshot = _auto_config_snapshot()
+
     if not rows:
         return {
             "count": 0,
@@ -181,6 +255,9 @@ def evaluate_predictions(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "bertscore_f1": None,
             "final_score": None,
             "bertscore_available": False,
+            "experiment_tag": experiment_tag,
+            "config_snapshot": normalized_snapshot,
+            "evaluated_at": datetime.now(timezone.utc).isoformat(),
         }
 
     recall_scores = [
@@ -217,4 +294,7 @@ def evaluate_predictions(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "bertscore_f1": bertscore_f1,
         "final_score": final_score,
         "bertscore_available": bertscore_f1 is not None,
+        "experiment_tag": experiment_tag,
+        "config_snapshot": normalized_snapshot,
+        "evaluated_at": datetime.now(timezone.utc).isoformat(),
     }
