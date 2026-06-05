@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Protocol
 
 import torch
 
 from app.preprocessing.corpus import Chunk
-from app.utils.config import resolve_llm_backend_name, resolve_llm_model_dir
+from app.utils.config import resolve_llm_model_dir
 
 
 def select_representative_line(content: str) -> str:
@@ -23,12 +24,12 @@ class LLMBackend(Protocol):
     def generate(self, question: str, chunks: list[Chunk]) -> str: ...
 
 
-class BaseGroundedCausalLMBackend:
+class GroundedCausalLMBackend:
     # causal LM 계열 생성 백엔드가 공유하는 프롬프트/추론 공통부입니다.
-    def __init__(self, max_evidence_items: int = 3) -> None:
+    def __init__(self, model_dir: Path | None = None, max_evidence_items: int = 3) -> None:
         # 생성에 사용할 모델 경로, 디바이스, 입력 길이 제한을 초기화합니다.
         self.max_evidence_items = max_evidence_items
-        self.model_dir = resolve_llm_model_dir()
+        self.model_dir = Path(model_dir) if model_dir is not None else resolve_llm_model_dir()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = None
         self.model = None
@@ -150,36 +151,11 @@ class BaseGroundedCausalLMBackend:
         return "\n".join(evidence_lines).strip() or "생성 결과가 비어 있습니다."
 
 
-class QwenBackend(BaseGroundedCausalLMBackend):
-    # 현재 제출 기준 기본 생성 백엔드입니다.
-    pass
-
-
-class ExaoneBackend(BaseGroundedCausalLMBackend):
-    # EXAONE 계열 비교 실험용 생성 백엔드입니다.
-    pass
-
-
-class Llama3Backend(BaseGroundedCausalLMBackend):
-    # Llama 계열 비교 실험용 생성 백엔드입니다.
-    pass
-
-
 def build_llm_backend() -> LLMBackend:
-    # config에서 선택한 LLM backend 이름을 실제 구현 클래스로 매핑합니다.
-    backend_name = resolve_llm_backend_name().strip().lower().replace("-", "").replace("_", "")
-    if backend_name == "qwen":
-        return QwenBackend()
-    if backend_name == "exaone":
-        return ExaoneBackend()
-    if backend_name in {"llama3", "llama31"}:
-        return Llama3Backend()
-    raise ValueError(
-        "Unsupported LLM backend: "
-        f"{resolve_llm_backend_name()}. Supported: qwen, exaone, llama3"
-    )
+    # 현재 선택된 로컬 모델 디렉터리를 그대로 사용하는 공통 causal LM backend를 반환합니다.
+    return GroundedCausalLMBackend()
 
 
-class GroundedGenerator(QwenBackend):
-    # 기존 import 호환성을 위해 Qwen 기본 구현 이름을 유지합니다.
+class GroundedGenerator(GroundedCausalLMBackend):
+    # 기존 import 호환성을 위해 공통 grounded generator 이름을 유지합니다.
     pass

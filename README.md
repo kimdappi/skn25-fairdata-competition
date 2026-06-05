@@ -1,7 +1,7 @@
 # 공정위 FairData RAG 제출 코드
 
 공정거래위원회 FairData 공모전 Track 2 제출용 RAG 서버입니다.  
-현재 코드는 FastAPI 기반 `/health`, `/predict` API를 제공하고, 검색은 backend 분리형 retrieval + reranker, 생성은 env 기반 LLM backend 구조로 구성돼 있습니다.
+현재 코드는 FastAPI 기반 `/health`, `/predict` API를 제공하고, 검색은 backend 분리형 retrieval + reranker, 생성은 env 기반 로컬 LLM 선택 구조로 구성돼 있습니다.
 
 ## 현재 코드 구조
 
@@ -48,7 +48,7 @@
 4. 선택된 검색 경로 결과만 `RRF` 또는 score fusion으로 합칩니다.
 5. 라우팅 일치도(`theme`, `focus`, `legal_role`, `industry`, `company_size`)를 retrieval bonus로 더합니다.
 6. 현재 선택된 reranker backend가 상위 후보를 재정렬합니다.
-7. 최종 5개 청크를 현재 선택된 LLM backend에 넘겨 답변을 생성합니다.
+7. 최종 5개 청크를 현재 선택된 로컬 LLM에 넘겨 답변을 생성합니다.
 
 검색 파이프라인 핵심 파일은 아래입니다.
 
@@ -138,7 +138,7 @@
 현재 구조는 `app/retrieval`, `app/rerank`, `app/generation` 안에서 모델 실험을 하기 쉽게 분리된 상태입니다. 실험 설정은 [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:1) 의 env 해석 함수로 제어합니다.
 
 - `app/utils/config.py`
-  - 어떤 retrieval / reranker / LLM backend를 쓸지, 어떤 retrieval 조합이 허용되는지 해석
+  - 어떤 retrieval / reranker / LLM 모델을 쓸지, 어떤 retrieval 조합이 허용되는지 해석
 - `app/retrieval/interfaces.py`
   - dense / sparse / multivector backend 인터페이스 정의
 - `app/retrieval/backends.py`
@@ -206,14 +206,14 @@
 2. 그다음 "dense는 무슨 backend 쓸 건데?"를 env에서 읽습니다.
    - 예를 들어 `FAIRDATA_DENSE_BACKEND=e5` 라고 적혀 있으면 내부적으로 `e5`로 정규화합니다.
 3. 그 backend에 맞는 기본 모델 폴더를 root 기준으로 붙입니다.
-   - 예를 들면 `e5`면 `BASE_DIR / models / multilingual-e5-large`
-   - 그래서 실제 경로는 `/home/ming9/skn25-fairdata-competition/models/multilingual-e5-large` 가 됩니다.
+   - 예를 들면 `e5`면 `BASE_DIR / models / embedding / multilingual-e5-large`
+   - 그래서 실제 경로는 `/home/ming9/skn25-fairdata-competition/models/embedding/multilingual-e5-large` 가 됩니다.
 4. 마지막으로 retrieval backend/runtime 코드가 그 경로를 받아서 진짜 모델을 로드합니다.
 
 즉 코드 입장에서는 이런 식입니다.
 
 - "dense backend는 e5네"
-- "그럼 기본 모델 폴더는 root 아래 `models/multilingual-e5-large` 쓰면 되겠다"
+- "그럼 기본 모델 폴더는 root 아래 `models/embedding/multilingual-e5-large` 쓰면 되겠다"
 - "이 경로를 SentenceTransformer 쪽에 넘겨서 읽자"
 
 반대로 env로 경로를 직접 주면 기본 경로 테이블보다 그 값이 우선입니다.
@@ -355,6 +355,23 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 - dense + bm25
   - dense=`e5` 같은 dense-only 모델, sparse=`bm25`, multivector off
 
+`FAIRDATA_LLM_BACKEND`는 이제 family 이름이 아니라 사실상 `models/llm` 아래 폴더명입니다.
+
+- 예: `qwen2.5-7b-instruct`
+- 예: `qwen3-4b`
+- 예: `exaone-3.5-7.8b-instruct`
+- 예: `llama-3-open-ko-8b`
+- 예: `llama-varco-8b-instruct`
+- 예: `phi-3.5-mini-instruct`
+
+짧은 alias도 일부 유지합니다.
+
+- `qwen` -> `qwen2.5-7b-instruct`
+- `qwen3` -> `qwen3-8b`
+- `exaone` -> `exaone-3.5-7.8b-instruct`
+- `llama3` -> `llama-3-open-ko-8b`
+- `phi` -> `phi-3.5-mini-instruct`
+
 예를 들면 full hybrid는 이렇게 잡습니다.
 
 ```bash
@@ -365,7 +382,7 @@ export FAIRDATA_DENSE_BACKEND=bgem3
 export FAIRDATA_SPARSE_BACKEND=bgem3
 export FAIRDATA_MULTIVECTOR_BACKEND=bgem3
 export FAIRDATA_RERANK_BACKEND=bge_reranker
-export FAIRDATA_LLM_BACKEND=qwen
+export FAIRDATA_LLM_BACKEND=qwen2.5-7b-instruct
 export FAIRDATA_INDEX_NAMESPACE=exp_full_hybrid_bgem3
 export FAIRDATA_EXPERIMENT_TAG=full_hybrid_bgem3_qwen
 ```
@@ -379,7 +396,7 @@ export FAIRDATA_ENABLE_MULTIVECTOR=0
 export FAIRDATA_DENSE_BACKEND=e5
 export FAIRDATA_SPARSE_BACKEND=bm25
 export FAIRDATA_RERANK_BACKEND=bge_reranker
-export FAIRDATA_LLM_BACKEND=qwen
+export FAIRDATA_LLM_BACKEND=qwen2.5-7b-instruct
 export FAIRDATA_INDEX_NAMESPACE=exp_e5_bm25
 export FAIRDATA_EXPERIMENT_TAG=e5_bm25_qwen
 ```
@@ -698,6 +715,63 @@ python3 scripts/evaluate_local.py \
 - `token_f1`
 - `bertscore_f1` (`bert-score` 설치 시)
 - `final_score` (`0.35 * Recall@5 + 0.15 * MRR + 0.30 * BERTScore + 0.20 * F1`)
+
+### 평가 방법
+
+이 섹션은 [scripts/evaluate_local.py](/home/ming9/skn25-fairdata-competition/scripts/evaluate_local.py:1) 와 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:1) 기준으로 정리한 실제 평가 흐름입니다.
+
+`evaluate_local.py` 는 모델 파일을 직접 읽어서 점수를 계산하지 않습니다. 반드시 먼저 올라와 있는 `server.py`의 `POST /predict`를 HTTP로 호출하고, 그 응답을 평가합니다. 즉 평가는 항상 아래 입출력 계약을 전제로 합니다.
+
+- 입력 요청
+  - `{"id": "...", "question": "..."}`
+- 기대 응답
+  - `{"id": "...", "retrieved_chunk_ids": [...], "answer": "..."}`
+
+코드 흐름은 아래 순서입니다.
+
+1. `--eval-file`에서 평가셋을 읽습니다.
+   - JSONL이면 각 줄에 `id`, `question`, `gold_chunk_ids`, `gold_answer`가 있어야 합니다.
+   - JSON 배열이면 저장소의 변환 규칙에 맞춰 같은 내부 포맷으로 변환합니다.
+2. 각 문항마다 `/predict`를 1번 호출합니다.
+3. 응답에서 `retrieved_chunk_ids`, `answer`를 꺼냅니다.
+4. retrieval 지표와 answer 지표를 각각 계산합니다.
+5. 모든 문항의 평균을 내고 `summary.json`과 `predictions.jsonl`에 저장합니다.
+
+문항별로 계산하는 값은 아래와 같습니다.
+
+- `recall_at_5`
+  - 상위 5개 `retrieved_chunk_ids` 안에 gold chunk가 얼마나 포함됐는지 계산합니다.
+  - 구현은 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:132) 의 `compute_recall_at_5()` 입니다.
+- `mrr`
+  - 첫 정답 chunk가 top-5 안에서 몇 번째에 나왔는지의 역수입니다.
+  - 구현은 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:151) 의 `compute_mrr()` 입니다.
+- `token_f1`
+  - 생성 답변과 gold answer를 SQuAD 방식 토큰 F1으로 비교합니다.
+  - 구현은 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:184) 의 `compute_token_f1()` 입니다.
+
+전체 문항을 모은 뒤 추가로 계산하는 값은 아래입니다.
+
+- `bertscore_f1`
+  - 전체 예측 답변 리스트와 정답 답변 리스트를 한국어 BERTScore로 비교합니다.
+  - 구현은 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:202) 의 `compute_bertscore_f1()` 입니다.
+- `final_score`
+  - `0.35 * recall_at_5 + 0.15 * mrr + 0.30 * bertscore_f1 + 0.20 * token_f1`
+  - 구현은 [app/evaluation/metrics.py](/home/ming9/skn25-fairdata-competition/app/evaluation/metrics.py:216) 의 `compute_final_score()` 입니다.
+
+산출 파일도 역할이 나뉩니다.
+
+- `predictions.jsonl`
+  - 문항별 원시 결과 파일입니다.
+  - 각 줄에 `id`, `question`, `gold_chunk_ids`, `gold_answer`, `predicted_chunk_ids`, `predicted_answer`, `recall_at_5`, `mrr`, `token_f1`가 들어갑니다.
+- `summary.json`
+  - 전체 평균 지표와 최종 점수 요약 파일입니다.
+  - `config_snapshot`도 같이 저장돼서, 어떤 retrieval/reranker/llm 조합으로 나온 결과인지 나중에 추적할 수 있습니다.
+
+중요한 해석 포인트는 아래입니다.
+
+- 이 평가는 retrieval과 generation을 분리해서 따로 측정하지 않고, `/predict` 응답 하나를 기준으로 둘 다 함께 측정합니다.
+- `Recall@5`, `MRR`는 검색 품질을 주로 보고, `token_f1`, `bertscore_f1`는 답변 품질을 봅니다.
+- 따라서 같은 LLM을 두고 retrieval만 바꾸거나, 같은 retrieval을 두고 LLM만 바꿔도 `final_score`가 달라질 수 있습니다.
 
 평가셋 현황:
 

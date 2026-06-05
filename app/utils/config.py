@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+MODELS_DIR = BASE_DIR / "models"
 
 # 이 파일은 프로젝트 전역 설정의 "단일 해석 지점" 역할을 합니다.
 # 단순히 env 값을 읽는 데서 끝나지 않고,
@@ -17,6 +18,18 @@ def _normalize_backend_name(name: str) -> str:
     return name.strip().lower().replace("-", "_").replace(".", "_").replace("/", "_")
 
 
+def _embedding_model_dir(name: str) -> Path:
+    return MODELS_DIR / "embedding" / name
+
+
+def _reranker_model_dir(name: str) -> Path:
+    return MODELS_DIR / "reranker" / name
+
+
+def _llm_model_dir(name: str) -> Path:
+    return MODELS_DIR / "llm" / name
+
+
 # 다운로드 스크립트/패치노트에서 보이는 이름을 현재 코드의 내부 backend 키로 맞춥니다.
 # 너무 과감하게 구조를 바꾸지 않고, env 입력만 유연하게 받도록 정리한 alias 테이블입니다.
 DENSE_BACKEND_ALIASES: dict[str, str] = {
@@ -25,6 +38,7 @@ DENSE_BACKEND_ALIASES: dict[str, str] = {
     "baai_bge_m3": "bgem3",
     "upskyy_bgem3_ko": "upskyy_bgem3_ko",
     "upskyy_bge_m3_korean": "upskyy_bgem3_ko",
+    "bge_m3_korean": "upskyy_bgem3_ko",
     "e5": "e5",
     "multilingual_e5_large": "e5",
     "intfloat_multilingual_e5_large": "e5",
@@ -51,6 +65,7 @@ SPARSE_BACKEND_ALIASES: dict[str, str] = {
     "baai_bge_m3": "bgem3",
     "upskyy_bgem3_ko": "upskyy_bgem3_ko",
     "upskyy_bge_m3_korean": "upskyy_bgem3_ko",
+    "bge_m3_korean": "upskyy_bgem3_ko",
     "bm25": "bm25",
 }
 
@@ -60,6 +75,7 @@ MULTIVECTOR_BACKEND_ALIASES: dict[str, str] = {
     "baai_bge_m3": "bgem3",
     "upskyy_bgem3_ko": "upskyy_bgem3_ko",
     "upskyy_bge_m3_korean": "upskyy_bgem3_ko",
+    "bge_m3_korean": "upskyy_bgem3_ko",
 }
 
 RERANK_BACKEND_ALIASES: dict[str, str] = {
@@ -76,76 +92,62 @@ RERANK_BACKEND_ALIASES: dict[str, str] = {
     "ko_reranker": "ko_reranker",
     "dongjin_kr_ko_reranker": "ko_reranker",
     "minilm_l6": "minilm_l6",
+    "ms_marco_minilm_l_6_v2": "minilm_l6",
+    "cross_encoder_ms_marco_minilm_l_6_v2": "minilm_l6",
     "minilm_l12": "minilm_l12",
 }
 
-LLM_BACKEND_ALIASES: dict[str, str] = {
-    "qwen": "qwen",
-    "qwen2": "qwen",
-    "qwen25": "qwen",
-    "qwen2_5_7b": "qwen",
-    "qwen2_5_7b_instruct": "qwen",
-    "qwen_qwen2_5_7b_instruct": "qwen",
-    "qwen3": "qwen",
-    "qwen3_8b": "qwen",
-    "qwen_qwen3_8b": "qwen",
-    "qwen3_4b": "qwen",
-    "qwen_qwen3_4b": "qwen",
-    "exaone": "exaone",
-    "exaone_3_5_7_8b_instruct": "exaone",
-    "lgai_exaone_exaone_3_5_7_8b_instruct": "exaone",
-    "llama3": "llama3",
-    "llama_3_open_ko_8b": "llama3",
-    "beomi_llama_3_open_ko_8b": "llama3",
-    "llama_varco_8b_instruct": "llama3",
-    "ncsoft_llama_varco_8b_instruct": "llama3",
-}
-
-# LLM은 같은 backend family 안에서도 실제 모델 디렉터리 선택지가 여러 개이므로
-# family용 alias와 별도로 "어느 체크포인트를 쓸지"를 보존하는 selection map을 둡니다.
-LLM_MODEL_SELECTION_ALIASES: dict[str, str] = {
-    "qwen": "qwen",
-    "qwen2": "qwen",
-    "qwen25": "qwen",
-    "qwen2_5_7b": "qwen",
-    "qwen2_5_7b_instruct": "qwen",
-    "qwen_qwen2_5_7b_instruct": "qwen",
-    "qwen3": "qwen3_8b",
-    "qwen3_8b": "qwen3_8b",
-    "qwen_qwen3_8b": "qwen3_8b",
-    "qwen3_4b": "qwen3_4b",
-    "qwen_qwen3_4b": "qwen3_4b",
-    "exaone": "exaone",
-    "exaone_3_5_7_8b_instruct": "exaone",
-    "lgai_exaone_exaone_3_5_7_8b_instruct": "exaone",
-    "llama3": "llama3",
-    "llama_3_open_ko_8b": "llama3",
-    "beomi_llama_3_open_ko_8b": "llama3",
-    "llama_varco_8b_instruct": "llama_varco",
-    "ncsoft_llama_varco_8b_instruct": "llama_varco",
+LLM_MODEL_ALIASES: dict[str, str] = {
+    # 짧은 별칭은 유지하되, 내부 canonical 값은 실제 models/llm 폴더명으로 맞춥니다.
+    "qwen": "qwen2.5-7b-instruct",
+    "qwen2": "qwen2.5-7b-instruct",
+    "qwen25": "qwen2.5-7b-instruct",
+    "qwen2_5_7b": "qwen2.5-7b-instruct",
+    "qwen2_5_7b_instruct": "qwen2.5-7b-instruct",
+    "qwen_qwen2_5_7b_instruct": "qwen2.5-7b-instruct",
+    "qwen3": "qwen3-8b",
+    "qwen3_8b": "qwen3-8b",
+    "qwen_qwen3_8b": "qwen3-8b",
+    "qwen3_4b": "qwen3-4b",
+    "qwen_qwen3_4b": "qwen3-4b",
+    "exaone": "exaone-3.5-7.8b-instruct",
+    "exaone_3_5_7_8b_instruct": "exaone-3.5-7.8b-instruct",
+    "lgai_exaone_exaone_3_5_7_8b_instruct": "exaone-3.5-7.8b-instruct",
+    "llama3": "llama-3-open-ko-8b",
+    "llama_3_open_ko_8b": "llama-3-open-ko-8b",
+    "beomi_llama_3_open_ko_8b": "llama-3-open-ko-8b",
+    "llama_varco": "llama-varco-8b-instruct",
+    "llama_varco_8b_instruct": "llama-varco-8b-instruct",
+    "ncsoft_llama_varco_8b_instruct": "llama-varco-8b-instruct",
+    "phi": "phi-3.5-mini-instruct",
+    "phi_3": "phi-3.5-mini-instruct",
+    "phi_3_5": "phi-3.5-mini-instruct",
+    "phi_3_5_mini": "phi-3.5-mini-instruct",
+    "phi_3_5_mini_instruct": "phi-3.5-mini-instruct",
+    "microsoft_phi_3_5_mini_instruct": "phi-3.5-mini-instruct",
 }
 
 DENSE_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
-    "bgem3": BASE_DIR / "models" / "bge-m3",
-    "upskyy_bgem3_ko": BASE_DIR / "models" / "upskyy-bge-m3-korean",
-    "e5": BASE_DIR / "models" / "multilingual-e5-large",
-    "sbert": BASE_DIR / "models" / "ko-sbert-nli",
-    "jina_v4": BASE_DIR / "models" / "jina-embeddings-v4",
-    "gte_multilingual": BASE_DIR / "models" / "gte-multilingual-base",
-    "kure_v1": BASE_DIR / "models" / "KURE-v1",
-    "snowflake_ko": BASE_DIR / "models" / "snowflake-arctic-embed-l-v2.0-ko",
+    "bgem3": _embedding_model_dir("bge-m3"),
+    "upskyy_bgem3_ko": _embedding_model_dir("bge-m3-korean"),
+    "e5": _embedding_model_dir("multilingual-e5-large"),
+    "sbert": _embedding_model_dir("ko-sbert-nli"),
+    "jina_v4": _embedding_model_dir("jina-embeddings-v4"),
+    "gte_multilingual": _embedding_model_dir("gte-multilingual-base"),
+    "kure_v1": _embedding_model_dir("KURE-v1"),
+    "snowflake_ko": _embedding_model_dir("snowflake-arctic-embed-l-v2.0-ko"),
 }
 
 SPARSE_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
-    "bgem3": BASE_DIR / "models" / "bge-m3",
-    "upskyy_bgem3_ko": BASE_DIR / "models" / "upskyy-bge-m3-korean",
+    "bgem3": _embedding_model_dir("bge-m3"),
+    "upskyy_bgem3_ko": _embedding_model_dir("bge-m3-korean"),
     # BM25는 학습된 체크포인트가 필요 없지만 stable model_tag를 위해 고정 경로를 둡니다.
-    "bm25": BASE_DIR / "models" / "bm25",
+    "bm25": MODELS_DIR / "bm25",
 }
 
 MULTIVECTOR_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
-    "bgem3": BASE_DIR / "models" / "bge-m3",
-    "upskyy_bgem3_ko": BASE_DIR / "models" / "upskyy-bge-m3-korean",
+    "bgem3": _embedding_model_dir("bge-m3"),
+    "upskyy_bgem3_ko": _embedding_model_dir("bge-m3-korean"),
 }
 
 RETRIEVAL_BACKEND_CAPABILITIES: dict[str, dict[str, bool]] = {
@@ -167,27 +169,15 @@ SPARSE_BACKEND_KINDS: dict[str, str] = {
 }
 
 RERANK_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
-    "bge_reranker": BASE_DIR / "models" / "bge-reranker-v2-m3",
-    "bge_reranker_v2_m3": BASE_DIR / "models" / "bge-reranker-v2-m3",
-    "bge_reranker_v2_gemma": BASE_DIR / "models" / "bge-reranker-v2-gemma",
-    "bge_reranker_v2_5_gemma2": BASE_DIR / "models" / "bge-reranker-v2.5-gemma2-lightweight",
-    "jina_reranker_v3": BASE_DIR / "models" / "jina-reranker-v3",
-    "minilm_l6": BASE_DIR / "models" / "ms-marco-MiniLM-L-6-v2",
-    "minilm_l12": BASE_DIR / "models" / "ms-marco-MiniLM-L-12-v2",
-    "ko_reranker": BASE_DIR / "models" / "ko-reranker",
+    "bge_reranker": _reranker_model_dir("bge-reranker-v2-m3"),
+    "bge_reranker_v2_m3": _reranker_model_dir("bge-reranker-v2-m3"),
+    "bge_reranker_v2_gemma": _reranker_model_dir("bge-reranker-v2-gemma"),
+    "bge_reranker_v2_5_gemma2": _reranker_model_dir("bge-reranker-v2.5-gemma2-lightweight"),
+    "jina_reranker_v3": _reranker_model_dir("jina-reranker-v3"),
+    "minilm_l6": _reranker_model_dir("ms-marco-MiniLM-L-6-v2"),
+    "minilm_l12": _reranker_model_dir("ms-marco-MiniLM-L-12-v2"),
+    "ko_reranker": _reranker_model_dir("ko-reranker"),
 }
-
-LLM_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
-    # qwen 계열 기본값은 다운로드 스크립트에 맞춰 Qwen2.5-7B-Instruct로 둡니다.
-    "qwen": BASE_DIR / "models" / "qwen2.5-7b-instruct",
-    "qwen3_8b": BASE_DIR / "models" / "qwen3-8b",
-    "qwen3_4b": BASE_DIR / "models" / "qwen3-4b",
-    "exaone": BASE_DIR / "models" / "EXAONE-3.5-7.8B-Instruct",
-    # llama 계열 기본값은 현재 스크립트에 포함된 한국어 계열 후보로 둡니다.
-    "llama3": BASE_DIR / "models" / "Llama-3-Open-Ko-8B",
-    "llama_varco": BASE_DIR / "models" / "Llama-VARCO-8B-Instruct",
-}
-
 
 # env 파싱 유틸리티입니다.
 # 개별 모듈이 직접 os.getenv 를 호출하지 않게 해서 파싱 규칙을 한곳에 모읍니다.
@@ -230,15 +220,6 @@ def _resolve_backend_alias(env_name: str, default: str, alias_map: dict[str, str
     return alias_map.get(normalized, normalized)
 
 
-def _resolve_llm_model_selection() -> str:
-    # LLM은 backend family(qwen/exaone/llama3)와 실제 체크포인트 선택을 분리합니다.
-    # 예를 들어 FAIRDATA_LLM_BACKEND=qwen3-8b 이면 family는 qwen 이지만
-    # 실제 모델 디렉터리는 qwen3_8b 쪽을 선택해야 하므로 별도 selection map을 씁니다.
-    raw = _get_env_str("FAIRDATA_LLM_BACKEND", "qwen")
-    normalized = _normalize_backend_name(raw)
-    return LLM_MODEL_SELECTION_ALIASES.get(normalized, resolve_llm_backend_name())
-
-
 # 원천 코퍼스 디렉터리를 반환합니다.
 def resolve_data_dir() -> Path:
     return BASE_DIR / "data" / "raw"
@@ -246,7 +227,7 @@ def resolve_data_dir() -> Path:
 
 # 검색 경로 공통 기본 BGE-M3 모델 디렉터리를 반환합니다.
 def resolve_bgem3_model_dir() -> Path:
-    return BASE_DIR / "models" / "bge-m3"
+    return _embedding_model_dir("bge-m3")
 
 
 # dense 전용 모델 디렉터리를 반환합니다.
@@ -285,7 +266,7 @@ def resolve_bge_reranker_model_dir() -> Path:
         "FAIRDATA_RERANK_MODEL_DIR",
         resolve_reranker_backend_name(),
         RERANK_MODEL_DIR_BY_BACKEND,
-        BASE_DIR / "models" / "bge-reranker-v2-m3",
+        _reranker_model_dir("bge-reranker-v2-m3"),
     )
 
 
@@ -307,7 +288,7 @@ def resolve_reranker_weight() -> float:
 
 # 생성 모델 디렉터리를 반환합니다.
 def resolve_qwen_model_dir() -> Path:
-    return BASE_DIR / "models" / "qwen2.5-7b-instruct"
+    return _llm_model_dir("qwen2.5-7b-instruct")
 
 
 # LLM 모델 디렉터리를 반환합니다 (env 오버라이드 지원).
@@ -315,13 +296,16 @@ def resolve_llm_model_dir() -> Path:
     custom = os.getenv("FAIRDATA_LLM_MODEL_DIR")
     if custom:
         return Path(custom)
-    return LLM_MODEL_DIR_BY_BACKEND.get(_resolve_llm_model_selection(), resolve_qwen_model_dir())
+    return _llm_model_dir(resolve_llm_backend_name())
 
 
-# LLM backend 종류를 반환합니다.
+# LLM backend 이름을 반환합니다.
 def resolve_llm_backend_name() -> str:
-    # 예: qwen3-8b -> qwen, EXAONE-3.5-7.8B-Instruct -> exaone
-    return _resolve_backend_alias("FAIRDATA_LLM_BACKEND", "qwen", LLM_BACKEND_ALIASES)
+    # LLM은 실제 폴더명을 canonical 값으로 사용합니다.
+    # alias는 convenience 용으로만 두고, 알 수 없는 값은 그대로 폴더명으로 취급합니다.
+    raw = _get_env_str("FAIRDATA_LLM_BACKEND", "qwen2.5-7b-instruct")
+    normalized = _normalize_backend_name(raw)
+    return LLM_MODEL_ALIASES.get(normalized, raw)
 
 
 # 검색 인덱스 루트 디렉터리를 반환합니다.
@@ -520,4 +504,37 @@ def validate_retrieval_configuration() -> None:
         raise ValueError(
             "When sparse and multi-vector are both enabled, they must use the same learned backend family. "
             f"Got sparse='{sparse_backend}', multivector='{multivector_backend}'."
+        )
+
+
+def validate_selected_model_directories() -> None:
+    # 현재 선택된 backend 조합이 실제 로컬 모델 디렉터리와 대응되는지 빠르게 검증합니다.
+    missing: list[str] = []
+
+    if is_dense_enabled():
+        dense_dir = resolve_dense_model_dir()
+        if not dense_dir.exists():
+            missing.append(f"dense={resolve_dense_backend_name()} -> {dense_dir}")
+
+    if is_sparse_enabled() and not is_lexical_sparse_backend():
+        sparse_dir = resolve_sparse_model_dir()
+        if not sparse_dir.exists():
+            missing.append(f"sparse={resolve_sparse_backend_name()} -> {sparse_dir}")
+
+    if is_multivector_enabled():
+        multivector_dir = resolve_multivector_model_dir()
+        if not multivector_dir.exists():
+            missing.append(f"multivector={resolve_multivector_backend_name()} -> {multivector_dir}")
+
+    rerank_dir = resolve_bge_reranker_model_dir()
+    if not rerank_dir.exists():
+        missing.append(f"reranker={resolve_reranker_backend_name()} -> {rerank_dir}")
+
+    llm_dir = resolve_llm_model_dir()
+    if not llm_dir.exists():
+        missing.append(f"llm={resolve_llm_backend_name()} -> {llm_dir}")
+
+    if missing:
+        raise FileNotFoundError(
+            "Selected model directories do not exist:\n- " + "\n- ".join(missing)
         )

@@ -14,6 +14,7 @@ from app.utils.config import (
     resolve_retrieval_profile,
     resolve_sparse_backend_name,
     resolve_sparse_backend_kind,
+    validate_selected_model_directories,
     validate_retrieval_configuration,
 )
 
@@ -33,6 +34,7 @@ APP_TITLE = "꽃보다 의결 FairData Submission"
 DATA_DIR = resolve_data_dir()
 
 validate_retrieval_configuration()
+validate_selected_model_directories()
 
 app = FastAPI(title=APP_TITLE)
 router = QueryRouter()
