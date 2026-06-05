@@ -26,6 +26,7 @@ class LLMBackend(Protocol):
 class BaseGroundedCausalLMBackend:
     # causal LM 계열 생성 백엔드가 공유하는 프롬프트/추론 공통부입니다.
     def __init__(self, max_evidence_items: int = 3) -> None:
+        # 생성에 사용할 모델 경로, 디바이스, 입력 길이 제한을 초기화합니다.
         self.max_evidence_items = max_evidence_items
         self.model_dir = resolve_llm_model_dir()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,6 +36,7 @@ class BaseGroundedCausalLMBackend:
         self.max_new_tokens = int(os.getenv("FAIRDATA_GENERATION_MAX_NEW_TOKENS", "256"))
 
     def ensure_runtime(self) -> None:
+        # 첫 요청 시점에만 tokenizer/model을 로드해 서버 기동 비용을 줄입니다.
         if self.model is not None and self.tokenizer is not None:
             return
         try:
@@ -53,6 +55,7 @@ class BaseGroundedCausalLMBackend:
         self.model.to(self.device)
 
     def build_context(self, chunks: list[Chunk]) -> str:
+        # 상위 청크를 프롬프트에 넣기 좋은 텍스트 블록으로 직렬화합니다.
         sections: list[str] = []
         for chunk in chunks[: self.max_evidence_items]:
             section = "\n".join(
@@ -70,6 +73,7 @@ class BaseGroundedCausalLMBackend:
         return "\n\n".join(sections).strip()[: self.max_input_chars]
 
     def build_messages(self, question: str, chunks: list[Chunk]) -> list[dict[str, str]]:
+        # 채팅 템플릿이 기대하는 system/user 메시지 배열을 구성합니다.
         context = self.build_context(chunks)
         system_prompt = (
             "당신은 공정거래위원회 의결서 질의응답 도우미다. "
@@ -93,11 +97,14 @@ class BaseGroundedCausalLMBackend:
         ]
 
     def decode_generated_text(self, input_ids: torch.Tensor, generated_ids: torch.Tensor) -> str:
+        # 프롬프트 이후에 새로 생성된 completion 부분만 잘라 텍스트로 복원합니다.
         prompt_length = int(input_ids.shape[-1])
         completion_ids = generated_ids[0][prompt_length:]
         return self.tokenizer.decode(completion_ids, skip_special_tokens=True).strip()
 
     def generate(self, question: str, chunks: list[Chunk]) -> str:
+        # grounded generation 전체 흐름을 실행하고,
+        # 생성이 비어 있으면 근거 문장 fallback 응답을 반환합니다.
         if not chunks:
             return "질문과 직접 연결되는 근거 청크를 찾지 못했습니다."
 
@@ -159,6 +166,7 @@ class Llama3Backend(BaseGroundedCausalLMBackend):
 
 
 def build_llm_backend() -> LLMBackend:
+    # config에서 선택한 LLM backend 이름을 실제 구현 클래스로 매핑합니다.
     backend_name = resolve_llm_backend_name().strip().lower().replace("-", "").replace("_", "")
     if backend_name == "qwen":
         return QwenBackend()

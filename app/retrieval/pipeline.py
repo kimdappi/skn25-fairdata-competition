@@ -48,6 +48,8 @@ def ensure_top_k_chunks(
     ranked_chunks: list,
     top_k: int,
 ) -> list[Chunk]:
+    # 상위 단계에서 중복 chunk_id 가 섞여 들어와도 최종 반환은 고유 청크 기준으로 맞춥니다.
+    # 후보가 top_k 보다 적으면 코퍼스 순회로 남은 자리를 채워 평가/추론 인터페이스를 고정합니다.
     selected_chunks: list[Chunk] = []
     seen_chunk_ids: set[str] = set()
 
@@ -133,10 +135,15 @@ class HybridSearchPipeline:
     def __init__(self, corpus_store: CorpusStore, router: QueryRouter) -> None:
         self.corpus_store = corpus_store
         self.router = router
+        # backend 팩토리가 반환한 런타임을 경로 간에 재사용합니다.
+        # 예: BGE-M3 하나를 dense/sparse/multivector가 함께 쓰는 경우 중복 로드를 피합니다.
         self.backend_runtime_cache: dict[tuple[str, Path], object] = {}
+        # interfaces.py 에서 정의한 공통 계약 타입으로 backend 인스턴스를 보관합니다.
+        # 상위 파이프라인은 구체 모델명을 몰라도 동일한 메서드로 경로를 실행할 수 있습니다.
         self.dense_backend: DenseRetrievalBackend | None = None
         self.sparse_backend: SparseRetrievalBackend | None = None
         self.multivector_backend: MultiVectorRetrievalBackend | None = None
+        # engines.py 의 검색 엔진은 "코퍼스 + backend"를 받아 실제 인덱스 구축과 검색을 담당합니다.
         self.dense_engine: DenseSearchEngine | None = None
         self.sparse_engine: SparseSearchEngine | None = None
         self.multivector_engine: MultiVectorSearchEngine | None = None
@@ -161,11 +168,14 @@ class HybridSearchPipeline:
             return
 
         if self.enable_dense:
+            # 설정값 문자열을 backends.py 팩토리에 넘겨 실제 dense 구현체를 선택합니다.
             self.dense_backend = build_dense_backend(
                 resolve_dense_backend_name(),
                 resolve_dense_model_dir(),
                 self.backend_runtime_cache,
             )
+            # 선택된 backend 는 engines.py 의 DenseSearchEngine 에 주입되어
+            # 공통 dense 검색 흐름(인덱스/질의/조회)에 연결됩니다.
             self.dense_engine = DenseSearchEngine(self.corpus_store, self.dense_backend)
         if self.enable_sparse:
             sparse_caps = get_backend_capabilities(resolve_sparse_backend_name())
@@ -173,6 +183,7 @@ class HybridSearchPipeline:
                 raise ValueError(
                     f"Sparse backend '{resolve_sparse_backend_name()}' does not support sparse retrieval."
                 )
+            # sparse 도 같은 방식으로 설정 -> backend 구현체 -> engine 순서로 조립합니다.
             self.sparse_backend = build_sparse_backend(
                 resolve_sparse_backend_name(),
                 resolve_sparse_model_dir(),
@@ -186,6 +197,8 @@ class HybridSearchPipeline:
                     "Multi-vector backend "
                     f"'{resolve_multivector_backend_name()}' does not support multi-vector retrieval."
                 )
+            # multivector 는 현재 BGE-M3 계열만 지원하지만,
+            # 파이프라인 코드는 공통 인터페이스만 사용하므로 확장 지점은 유지됩니다.
             self.multivector_backend = build_multivector_backend(
                 resolve_multivector_backend_name(),
                 resolve_multivector_model_dir(),
@@ -221,6 +234,8 @@ class HybridSearchPipeline:
         trace = RetrievalTrace()
         default_path_top_k = max(top_k * 6, 30)
 
+        # 각 engine 은 동일한 search 시그니처를 가지므로,
+        # 파이프라인은 경로별 top_k 조정만 하고 실행 자체는 공통 흐름으로 다룹니다.
         if self.enable_dense and self.dense_engine is not None:
             dense_top_k = resolve_dense_path_top_k(default_path_top_k)
             trace.dense_hits = self.dense_engine.search(analysis, top_k=dense_top_k)
@@ -272,6 +287,8 @@ class HybridSearchPipeline:
 
     # 최종 파이프라인을 실행해 평가용 상위 청크를 반환합니다.
     def search(self, question: str, top_k: int = 5) -> list[Chunk]:
+        # 전체 흐름:
+        # 1) 질문 분석 2) 경로별 검색 3) fusion 4) rerank(optional) 5) 최종 chunk 반환
         analysis = self.analyze_query(question)
         trace = self.run_retrieval_paths(analysis, top_k=top_k)
         fused_scores = self.fuse_hits(analysis, trace)

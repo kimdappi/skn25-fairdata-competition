@@ -23,6 +23,7 @@ FOCUS_ORDER = "처분"
 class RoutingRules:
     # 규칙 기반 질의 분류에 필요한 키워드 사전을 초기화합니다.
     def __init__(self) -> None:
+        # 라우팅 키워드 사전을 인스턴스 속성으로 고정해 분류 시 재사용합니다.
         self.theme_keywords = THEME_KEYWORDS
         self.enterprise_size_keywords = ENTERPRISE_SIZE_KEYWORDS
         self.legal_role_keywords = LEGAL_ROLE_KEYWORDS
@@ -33,6 +34,7 @@ class RoutingRules:
 
     # 키워드 사전을 이용해 텍스트를 가장 가까운 범주로 분류합니다.
     def classify_text(self, text: str, keyword_map: dict[str, list[str]], default: str = OTHER) -> str:
+        # 첫 일치 범주를 반환하는 단순 규칙 기반 분류기입니다.
         for category, keywords in keyword_map.items():
             if any(keyword in text for keyword in keywords):
                 return category
@@ -40,6 +42,7 @@ class RoutingRules:
 
     # 기업 규모가 직접 드러나지 않을 때 법적 지위와 문맥으로 보정합니다.
     def infer_company_size(self, text: str, current_size: str, legal_role: str) -> str:
+        # 기업 규모 키워드가 직접 없으면 법적 지위와 보조 키워드로 보정합니다.
         if current_size != OTHER:
             return current_size
         if legal_role == "시장지배적 사업자(독과점)":
@@ -50,6 +53,7 @@ class RoutingRules:
 
     # 질문의 초점을 처분, 위법성, 사실관계, 일반 중 하나로 추정합니다.
     def extract_focus(self, text: str) -> str:
+        # 질문이 처분, 위법성, 사실관계 중 어디에 초점을 두는지 판별합니다.
         if any(keyword in text for keyword in self.order_keywords):
             return FOCUS_ORDER
         if any(keyword in text for keyword in self.law_keywords):
@@ -60,6 +64,7 @@ class RoutingRules:
 
     # 입력 텍스트를 질의 의도 메타데이터로 변환합니다.
     def build_route_decision(self, text: str) -> RouteDecision:
+        # theme / company_size / legal_role / industry / focus 를 한 번에 계산합니다.
         legal_role = self.classify_text(text, self.legal_role_keywords)
         company_size = self.infer_company_size(
             text=text,
@@ -83,4 +88,5 @@ class QueryRouter:
 
     # 입력 텍스트를 질의 의도 메타데이터로 변환합니다.
     def route_from_text(self, text: str) -> RouteDecision:
+        # 외부에서는 이 메서드만 호출해 텍스트를 라우팅 메타데이터로 변환합니다.
         return self.rules.build_route_decision(text)

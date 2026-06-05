@@ -15,6 +15,7 @@ os.environ.setdefault("USE_TF", "0")
 
 # 현재 실행 환경에서 사용할 torch dtype을 결정합니다.
 def preferred_torch_dtype() -> torch.dtype:
+    # GPU 메모리와 정밀도 요구에 맞춰 dtype을 env로 조절할 수 있게 합니다.
     dtype_name = os.getenv("FAIRDATA_TORCH_DTYPE", "float16").strip().lower()
     if dtype_name in {"bf16", "bfloat16"}:
         return torch.bfloat16
@@ -33,6 +34,8 @@ def resolve_runtime_device() -> torch.device:
 class BGEM3HybridModel:
     # BGE-M3 모델과 sparse, multi-vector 보조 헤드를 초기화합니다.
     def __init__(self, model_dir: Path) -> None:
+        # BGE-M3 본체와 별도 head 파일 2개를 함께 로드해
+        # dense / sparse / multivector 출력을 모두 지원하도록 초기화합니다.
         try:
             from transformers import AutoModel, AutoTokenizer
         except ImportError as exc:
@@ -82,11 +85,13 @@ class BGEM3HybridModel:
 
     # 요청 길이와 토크나이저 한계를 함께 고려해 최대 길이를 결정합니다.
     def effective_max_length(self, max_length: int | None) -> int:
+        # 호출부 요청 길이와 모델 한도 중 더 작은 값을 사용합니다.
         requested = max_length or self.default_max_length
         return min(requested, int(self.tokenizer.model_max_length))
 
     # 공통 토크나이즈 단계를 수행해 모델 입력 텐서를 만듭니다.
     def tokenize_batch(self, texts: list[str], max_length: int | None) -> dict[str, torch.Tensor]:
+        # 세 검색 경로가 공통으로 쓰는 토크나이즈 결과를 생성합니다.
         encoded = self.tokenizer(
             texts,
             padding=True,
@@ -105,6 +110,7 @@ class BGEM3HybridModel:
         batch_size: int | None = None,
         max_length: int | None = None,
     ) -> np.ndarray:
+        # CLS 위치 임베딩을 정규화해 dense 검색용 벡터로 사용합니다.
         items = list(texts)
         vectors: list[np.ndarray] = []
         effective_batch_size = batch_size or self.default_batch_size
@@ -127,6 +133,7 @@ class BGEM3HybridModel:
         batch_size: int | None = None,
         max_length: int | None = None,
     ):
+        # 토큰별 sparse weight를 계산해 vocab 차원의 CSR 행렬로 변환합니다.
         from scipy.sparse import csr_matrix
 
         items = list(texts)
@@ -163,6 +170,7 @@ class BGEM3HybridModel:
                     if previous is None or weight_value > previous:
                         token_to_weight[token_id] = weight_value
                 for token_id, weight_value in token_to_weight.items():
+                    # 같은 토큰이 여러 번 나오면 가장 큰 weight만 유지합니다.
                     rows.append(global_row)
                     cols.append(token_id)
                     values.append(weight_value)
@@ -181,6 +189,7 @@ class BGEM3HybridModel:
         batch_size: int | None = None,
         max_length: int | None = None,
     ) -> list[np.ndarray]:
+        # 토큰 단위 임베딩 시퀀스를 생성해 late-interaction 검색에 사용합니다.
         items = list(texts)
         vectors: list[np.ndarray] = []
         effective_batch_size = batch_size or self.default_batch_size
@@ -201,6 +210,7 @@ class BGEM3HybridModel:
 
     # query와 document multi-vector 간 late interaction 점수를 계산합니다.
     def multivector_score(self, query_vectors: np.ndarray, doc_vectors: np.ndarray) -> float:
+        # query 토큰별 최고 유사도를 평균내는 ColBERT 계열 점수를 계산합니다.
         if query_vectors.size == 0 or doc_vectors.size == 0:
             return 0.0
         token_scores = query_vectors @ doc_vectors.T

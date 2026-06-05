@@ -24,6 +24,8 @@ INDEX_FORMAT_VERSION = 1
 
 
 def build_chunk_fingerprint(chunk_ids: list[str], chunk_texts: list[str]) -> str:
+    # 현재 코퍼스 상태를 대표하는 fingerprint 입니다.
+    # 청크 ID 나 텍스트가 바뀌면 인덱스를 다시 만들어야 하므로 manifest 검증에 사용합니다.
     digest = hashlib.sha256()
     for chunk_id, chunk_text in zip(chunk_ids, chunk_texts):
         digest.update(chunk_id.encode("utf-8"))
@@ -34,16 +36,19 @@ def build_chunk_fingerprint(chunk_ids: list[str], chunk_texts: list[str]) -> str
 
 
 def sanitize_model_tag(model_dir: Path) -> str:
+    # 모델 경로를 파일명/디렉터리명에 안전하게 넣기 위해 짧은 해시 태그로 변환합니다.
     return hashlib.sha1(str(model_dir.resolve()).encode("utf-8")).hexdigest()[:12]
 
 
 def load_manifest(manifest_path: Path) -> dict:
+    # 인덱스가 어떤 코퍼스/포맷 기준으로 만들어졌는지 기록한 manifest를 읽습니다.
     if not manifest_path.exists():
         return {}
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
 def write_manifest(manifest_path: Path, payload: dict) -> None:
+    # 인덱스 재사용 여부를 판단할 수 있도록 manifest를 JSON으로 저장합니다.
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
@@ -52,6 +57,7 @@ def write_manifest(manifest_path: Path, payload: dict) -> None:
 
 
 def manifest_matches(manifest: dict, *, fingerprint: str, count: int) -> bool:
+    # 현재 코퍼스와 인덱스 메타데이터가 일치하는지 검사합니다.
     return (
         manifest.get("format_version") == INDEX_FORMAT_VERSION
         and manifest.get("fingerprint") == fingerprint
@@ -62,6 +68,8 @@ def manifest_matches(manifest: dict, *, fingerprint: str, count: int) -> bool:
 class DenseSearchEngine:
     # BGE-M3 dense retrieval 경로를 초기화합니다.
     def __init__(self, corpus_store: CorpusStore, backend: DenseRetrievalBackend) -> None:
+        # interfaces.py 의 DenseRetrievalBackend 계약을 받기 때문에,
+        # 실제 구현이 BGE-M3 인지 SentenceTransformer 인지 엔진은 신경 쓰지 않습니다.
         self.chunks = corpus_store.chunks
         self.backend = backend
         self.model_tag = sanitize_model_tag(self.backend.model_dir)
@@ -87,6 +95,7 @@ class DenseSearchEngine:
         manifest = load_manifest(self.manifest_path)
         current_count = collection.count()
         expected_count = len(self.chunks)
+        # 코퍼스 수나 fingerprint 가 다르면 기존 인덱스를 신뢰할 수 없으므로 재구축합니다.
         if current_count != expected_count or not manifest_matches(
             manifest,
             fingerprint=self.chunk_fingerprint,
@@ -95,6 +104,7 @@ class DenseSearchEngine:
             try:
                 client.delete_collection(self.collection_name)
             except Exception:
+                # 컬렉션이 없거나 삭제 실패해도 새 컬렉션 생성으로 복구 가능하므로 무시합니다.
                 pass
             collection = client.get_or_create_collection(name=self.collection_name)
             self.populate_collection(collection)
@@ -111,6 +121,7 @@ class DenseSearchEngine:
 
     # BGE-M3 dense embedding을 Chroma 컬렉션에 적재합니다.
     def populate_collection(self, collection) -> None:
+        # dense 검색에 필요한 임베딩/문서/메타데이터를 Chroma 컬렉션에 적재합니다.
         embeddings = self.backend.encode_documents(self.chunk_texts).tolist()
         documents = [chunk.content for chunk in self.chunks]
         metadatas = [
@@ -160,6 +171,7 @@ class DenseSearchEngine:
 class SparseSearchEngine:
     # learned sparse(BGE-M3) 또는 BM25 sparse retrieval 경로를 초기화합니다.
     def __init__(self, corpus_store: CorpusStore, backend: SparseRetrievalBackend) -> None:
+        # backend 가 sparse 공통 계약을 지키면 BGE-M3 sparse 와 BM25 를 같은 엔진으로 다룰 수 있습니다.
         self.chunks = corpus_store.chunks
         self.backend = backend
         self.model_tag = sanitize_model_tag(self.backend.model_dir)
@@ -173,6 +185,8 @@ class SparseSearchEngine:
         self.chunk_sparse_index = self.load_or_build_index()
 
     def load_or_build_index(self):
+        # sparse 인덱스는 구현체마다 저장 형식이 달라질 수 있으므로
+        # 실제 직렬화/복원은 backend 에 위임하고 엔진은 lifecycle 만 관리합니다.
         manifest = load_manifest(self.manifest_path)
         if self.index_path.exists() and manifest_matches(
             manifest,
@@ -198,6 +212,7 @@ class SparseSearchEngine:
 
     # sparse 질의 벡터를 생성합니다.
     def encode_query(self, analysis: QueryAnalysis):
+        # 분석된 질문 객체에서 실제 질문 문자열만 꺼내 backend로 전달합니다.
         return self.backend.encode_query(analysis.question)
 
     # sparse 쿼리와 문서 인덱스의 점수를 backend별 방식으로 계산합니다.
@@ -218,6 +233,7 @@ class SparseSearchEngine:
 class MultiVectorSearchEngine:
     # BGE-M3 multi-vector retrieval 경로를 초기화합니다.
     def __init__(self, corpus_store: CorpusStore, backend: MultiVectorRetrievalBackend) -> None:
+        # multivector 도 backend 계약만 맞으면 같은 엔진 흐름을 재사용할 수 있습니다.
         self.chunks = corpus_store.chunks
         self.backend = backend
         self.model_tag = sanitize_model_tag(self.backend.model_dir)
@@ -230,6 +246,8 @@ class MultiVectorSearchEngine:
         self.chunk_multivectors = self.load_or_build_index()
 
     def load_or_build_index(self) -> list[np.ndarray]:
+        # 문서별 토큰 벡터 길이가 달라 배열 하나로 바로 저장하기 어려우므로,
+        # 평탄화(flatten) 저장 포맷과 길이 배열을 함께 관리합니다.
         manifest = load_manifest(self.manifest_path)
         if self.index_path.exists() and manifest_matches(
             manifest,
@@ -255,6 +273,7 @@ class MultiVectorSearchEngine:
 
     @staticmethod
     def save_multivectors(index_path: Path, vectors: list[np.ndarray]) -> None:
+        # 가변 길이 벡터 묶음을 하나의 2차원 배열 + 길이 정보로 직렬화합니다.
         lengths = np.asarray([vector.shape[0] for vector in vectors], dtype=np.int32)
         non_empty_vectors = [vector.astype("float32") for vector in vectors if vector.size > 0]
         if non_empty_vectors:
@@ -272,6 +291,7 @@ class MultiVectorSearchEngine:
 
     @staticmethod
     def load_multivectors(index_path: Path) -> list[np.ndarray]:
+        # 저장 시 평탄화한 벡터를 길이 배열을 기준으로 다시 문서 단위로 복원합니다.
         payload = np.load(index_path, allow_pickle=False)
         flat_vectors = payload["flat_vectors"].astype("float32")
         lengths = payload["lengths"].astype(np.int32)

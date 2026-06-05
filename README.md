@@ -195,13 +195,44 @@
 - `resolve_bge_reranker_model_dir()`
 - `resolve_qwen_model_dir()`
 
+#### root 기준으로 보면 실제로 어떻게 읽히는지
+
+말 그대로 `config.py`는 "모델을 직접 로드하는 파일"이라기보다 "지금 repo root를 기준으로 어느 폴더를 모델 경로로 넘길지 정하는 파일"입니다.
+
+구어체로 풀면 이런 느낌입니다.
+
+1. 코드가 먼저 프로젝트 root를 잡습니다.
+   - 지금 기준으로는 `BASE_DIR = /home/ming9/skn25-fairdata-competition` 입니다.
+2. 그다음 "dense는 무슨 backend 쓸 건데?"를 env에서 읽습니다.
+   - 예를 들어 `FAIRDATA_DENSE_BACKEND=e5` 라고 적혀 있으면 내부적으로 `e5`로 정규화합니다.
+3. 그 backend에 맞는 기본 모델 폴더를 root 기준으로 붙입니다.
+   - 예를 들면 `e5`면 `BASE_DIR / models / multilingual-e5-large`
+   - 그래서 실제 경로는 `/home/ming9/skn25-fairdata-competition/models/multilingual-e5-large` 가 됩니다.
+4. 마지막으로 retrieval backend/runtime 코드가 그 경로를 받아서 진짜 모델을 로드합니다.
+
+즉 코드 입장에서는 이런 식입니다.
+
+- "dense backend는 e5네"
+- "그럼 기본 모델 폴더는 root 아래 `models/multilingual-e5-large` 쓰면 되겠다"
+- "이 경로를 SentenceTransformer 쪽에 넘겨서 읽자"
+
+반대로 env로 경로를 직접 주면 기본 경로 테이블보다 그 값이 우선입니다.
+
+- 예: `FAIRDATA_DENSE_MODEL_DIR=/mnt/exp/e5-large`
+- 그러면 backend는 여전히 `e5` 방식으로 동작하지만, 실제 모델은 `/mnt/exp/e5-large` 에서 읽습니다.
+
+한 줄로 정리하면 이렇습니다.
+
+- backend 이름은 "어떤 방식으로 로드하고 쓸지"를 정합니다.
+- model_dir 경로는 "어디서 실제 파일을 읽을지"를 정합니다.
+
 ### 4. 다른 retrieval 모델을 붙이는 경우
 
 예를 들어 dense만 다른 임베딩 모델로 바꾸려면 아래 순서로 합니다.
 
 1. [app/retrieval/interfaces.py](/home/ming9/skn25-fairdata-competition/app/retrieval/interfaces.py:8) 의 `DenseRetrievalBackend` 인터페이스를 구현하는 새 클래스를 추가
 2. [app/retrieval/backends.py](/home/ming9/skn25-fairdata-competition/app/retrieval/backends.py:77) 의 `build_dense_backend()`에 새 backend 이름 등록
-3. [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:8) 의 `DENSE_BACKEND` 값을 새 backend 이름으로 변경
+3. [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:8) 기준으로 `resolve_dense_backend_name()` 이 읽는 env, 즉 `FAIRDATA_DENSE_BACKEND` 값을 새 backend 이름으로 변경
 4. `resolve_dense_model_dir()`가 새 모델 디렉터리를 가리키도록 수정
 
 sparse, multivector도 같은 방식이지만 제약이 있습니다.
@@ -218,14 +249,14 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 
 1. [app/rerank/interfaces.py](/home/ming9/skn25-fairdata-competition/app/rerank/interfaces.py:9) 의 `RerankerBackend` 인터페이스를 구현하는 새 클래스를 추가
 2. [app/rerank/backends.py](/home/ming9/skn25-fairdata-competition/app/rerank/backends.py:10) 의 `build_reranker_backend()`에 새 backend 이름 등록
-3. [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:11) 의 `RERANK_BACKEND` 값을 새 backend 이름으로 변경
+3. [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:11) 기준으로 `resolve_reranker_backend_name()` 이 읽는 env, 즉 `FAIRDATA_RERANK_BACKEND` 값을 새 backend 이름으로 변경
 4. `resolve_bge_reranker_model_dir()`가 새 모델 디렉터리를 가리키도록 수정
 
 즉 현재 기본 구현은 `bge_reranker`지만, 다른 cross-encoder 계열 리랭커도 같은 패턴으로 꽂을 수 있습니다.
 
 ### 6. RRF를 넣었다 뺐다 하는 경우
 
-[app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:12) 의 `USE_RRF_FUSION`을 수정합니다.
+[app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:12) 기준으로 `use_rrf_fusion()` 이 읽는 env, 즉 `FAIRDATA_USE_RRF_FUSION`을 수정합니다.
 
 - `True`: [app/retrieval/pipeline.py](/home/ming9/skn25-fairdata-competition/app/retrieval/pipeline.py:220) 의 RRF 사용
 - `False`: [app/retrieval/pipeline.py](/home/ming9/skn25-fairdata-competition/app/retrieval/pipeline.py:227) 의 score fusion 사용
@@ -245,23 +276,39 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 실험할 때 실제로 가장 자주 수정하는 값은 아래입니다.
 
 - retrieval backend 종류
-  - `DENSE_BACKEND`
-  - `SPARSE_BACKEND`
-  - `MULTIVECTOR_BACKEND`
+  - `FAIRDATA_DENSE_BACKEND`
+  - `FAIRDATA_SPARSE_BACKEND`
+  - `FAIRDATA_MULTIVECTOR_BACKEND`
 - reranker backend 종류
-  - `RERANK_BACKEND`
+  - `FAIRDATA_RERANK_BACKEND`
 - fusion 방식
-  - `USE_RRF_FUSION`
+  - `FAIRDATA_USE_RRF_FUSION`
 - 모델 경로
   - `resolve_dense_model_dir()`
   - `resolve_sparse_model_dir()`
   - `resolve_multivector_model_dir()`
   - `resolve_bge_reranker_model_dir()`
-  - `resolve_qwen_model_dir()`
+  - `resolve_llm_model_dir()`
 - 경로 on/off
-  - `is_dense_enabled()`
-  - `is_sparse_enabled()`
-  - `is_multivector_enabled()`
+  - `FAIRDATA_ENABLE_DENSE`
+  - `FAIRDATA_ENABLE_SPARSE`
+  - `FAIRDATA_ENABLE_MULTIVECTOR`
+
+함수 기준으로 보면 대응 관계는 이렇게 읽으면 됩니다.
+
+- `resolve_dense_backend_name()` -> `FAIRDATA_DENSE_BACKEND`
+- `resolve_sparse_backend_name()` -> `FAIRDATA_SPARSE_BACKEND`
+- `resolve_multivector_backend_name()` -> `FAIRDATA_MULTIVECTOR_BACKEND`
+- `resolve_reranker_backend_name()` -> `FAIRDATA_RERANK_BACKEND`
+- `use_rrf_fusion()` -> `FAIRDATA_USE_RRF_FUSION`
+- `is_dense_enabled()` -> `FAIRDATA_ENABLE_DENSE`
+- `is_sparse_enabled()` -> `FAIRDATA_ENABLE_SPARSE`
+- `is_multivector_enabled()` -> `FAIRDATA_ENABLE_MULTIVECTOR`
+- `resolve_dense_model_dir()` -> `FAIRDATA_DENSE_MODEL_DIR`
+- `resolve_sparse_model_dir()` -> `FAIRDATA_SPARSE_MODEL_DIR`
+- `resolve_multivector_model_dir()` -> `FAIRDATA_MULTIVECTOR_MODEL_DIR`
+- `resolve_bge_reranker_model_dir()` -> `FAIRDATA_RERANK_MODEL_DIR`
+- `resolve_llm_model_dir()` -> `FAIRDATA_LLM_MODEL_DIR`
 
 ## 모델 경로
 
@@ -273,6 +320,210 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 - Qwen 생성 모델: `models/qwen2.5-7b-instruct`
 
 경로를 바꾸려면 [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:1) 의 반환값을 직접 수정하면 됩니다.
+
+## 실험 진행 가이드
+
+아래 절차는 "모델 파일은 `models/` 아래에 이미 있고, 필요한 인덱스도 `index/` 아래에 이미 있다"는 가정으로 적었습니다. 기준 위치는 모두 repo root, 즉 `/home/ming9/skn25-fairdata-competition` 입니다.
+
+이 섹션은 현재 코드의 [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:1), [server.py](/home/ming9/skn25-fairdata-competition/server.py:1), [scripts/evaluate_local.py](/home/ming9/skn25-fairdata-competition/scripts/evaluate_local.py:1), 그리고 제출 규격 설명이 있는 `docs/공정위AI공모전 모델제출 가이드.md`를 같이 참고해서 정리한 사용 절차입니다.
+
+### 1. 먼저 어떤 조합으로 돌릴지 정합니다
+
+실험은 결국 `config.py`가 읽는 env 조합으로 결정됩니다. root에서 실행할 때 가장 자주 만지는 값은 아래입니다.
+
+- retrieval 경로 on/off
+  - `FAIRDATA_ENABLE_DENSE`
+  - `FAIRDATA_ENABLE_SPARSE`
+  - `FAIRDATA_ENABLE_MULTIVECTOR`
+- retrieval backend 선택
+  - `FAIRDATA_DENSE_BACKEND`
+  - `FAIRDATA_SPARSE_BACKEND`
+  - `FAIRDATA_MULTIVECTOR_BACKEND`
+- reranker / generation
+  - `FAIRDATA_RERANK_BACKEND`
+  - `FAIRDATA_RERANK_TOP_N`
+  - `FAIRDATA_RERANK_WEIGHT`
+  - `FAIRDATA_LLM_BACKEND`
+- 실험 분리용 이름
+  - `FAIRDATA_INDEX_NAMESPACE`
+  - `FAIRDATA_EXPERIMENT_TAG`
+
+실제로는 아래 두 패턴이 가장 무난합니다.
+
+- full hybrid
+  - dense=`bgem3`, sparse=`bgem3`, multivector=`bgem3`
+- dense + bm25
+  - dense=`e5` 같은 dense-only 모델, sparse=`bm25`, multivector off
+
+예를 들면 full hybrid는 이렇게 잡습니다.
+
+```bash
+export FAIRDATA_ENABLE_DENSE=1
+export FAIRDATA_ENABLE_SPARSE=1
+export FAIRDATA_ENABLE_MULTIVECTOR=1
+export FAIRDATA_DENSE_BACKEND=bgem3
+export FAIRDATA_SPARSE_BACKEND=bgem3
+export FAIRDATA_MULTIVECTOR_BACKEND=bgem3
+export FAIRDATA_RERANK_BACKEND=bge_reranker
+export FAIRDATA_LLM_BACKEND=qwen
+export FAIRDATA_INDEX_NAMESPACE=exp_full_hybrid_bgem3
+export FAIRDATA_EXPERIMENT_TAG=full_hybrid_bgem3_qwen
+```
+
+dense + bm25는 이렇게 잡으면 됩니다.
+
+```bash
+export FAIRDATA_ENABLE_DENSE=1
+export FAIRDATA_ENABLE_SPARSE=1
+export FAIRDATA_ENABLE_MULTIVECTOR=0
+export FAIRDATA_DENSE_BACKEND=e5
+export FAIRDATA_SPARSE_BACKEND=bm25
+export FAIRDATA_RERANK_BACKEND=bge_reranker
+export FAIRDATA_LLM_BACKEND=qwen
+export FAIRDATA_INDEX_NAMESPACE=exp_e5_bm25
+export FAIRDATA_EXPERIMENT_TAG=e5_bm25_qwen
+```
+
+주의할 점은, `config.py`가 backend family 제약을 강하게 검사한다는 점입니다.
+
+- `e5 + bm25` 는 허용
+- `e5 + bgem3 sparse` 는 차단
+- multivector를 켜면 현재 구현상 dense backend와 같은 family여야 함
+
+### 2. 설정이 맞는지 먼저 검증합니다
+
+제일 먼저 현재 env 조합이 유효한지 확인합니다.
+
+```bash
+python3 scripts/validate_model_matrix.py
+```
+
+여기서 확인할 포인트는 아래입니다.
+
+- `retrieval_profile` 이 내가 의도한 조합으로 나오는지
+- dense/sparse/multivector backend 이름이 기대한 값인지
+- validation error 없이 끝나는지
+
+### 3. 인덱스를 그대로 쓸지, 다시 만들지 결정합니다
+
+이번 요청은 "index 파일이 이미 있다"는 가정이지만, 아래 둘 중 하나라도 바뀌었으면 인덱스를 다시 만드는 쪽이 안전합니다.
+
+- 코퍼스 내용이 바뀐 경우
+- backend 또는 `FAIRDATA_INDEX_NAMESPACE` 를 바꾼 경우
+
+다시 만들 필요가 있으면 root에서 이렇게 실행합니다.
+
+```bash
+python3 scripts/build_indexes.py
+```
+
+이미 같은 namespace와 같은 코퍼스 기준 인덱스가 준비돼 있으면 이 단계는 건너뛰어도 됩니다. 다만 헷갈리면 한 번 실행해서 manifest/fingerprint 기준으로 재사용 또는 재생성을 맡기는 편이 안전합니다.
+
+### 4. 서버를 띄우고 제출 규격대로 상태를 확인합니다
+
+제출 가이드 기준으로 심사 서버는 먼저 `GET /health`, 그 다음 `POST /predict`를 호출합니다. 그래서 실험할 때도 이 순서로 보는 게 맞습니다.
+
+```bash
+uvicorn server:app --host 0.0.0.0 --port 8000
+```
+
+다른 터미널에서 health 확인:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+여기서 최소한 아래를 확인합니다.
+
+- `status` 가 `ok` 인지
+- `retrieval_profile` 이 의도한 실험 조합인지
+- `dense_backend`, `sparse_backend`, `multivector_backend` 가 env와 맞는지
+
+그다음 predict를 한 번 직접 때려봅니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"demo-1","question":"한국계란유통협회의 위반 사실과 처분 내용을 설명해 주세요."}'
+```
+
+`docs/공정위AI공모전 모델제출 가이드.md` 기준으로 여기서 꼭 맞아야 하는 규칙은 아래입니다.
+
+- `retrieved_chunk_ids` 는 정확히 5개여야 함
+- 중복 chunk_id가 있으면 안 됨
+- 코퍼스에 존재하는 chunk_id만 반환해야 함
+- 배열 순서가 랭킹 의미를 가져야 함
+- 응답 시간은 문항당 30초를 넘기지 않는 쪽으로 맞춰야 함
+
+### 5. 로컬 평가를 돌립니다
+
+서버가 올라온 상태에서 `evaluate_local.py` 를 실행하면, 제출 환경과 비슷하게 `/predict`를 HTTP로 호출하면서 평가를 진행합니다.
+
+전체 평가셋 기준 예시는 아래입니다.
+
+```bash
+python3 scripts/evaluate_local.py \
+  --base-url http://127.0.0.1:8000 \
+  --eval-file ./data/test/eval_dataset_260505.json
+```
+
+빠르게 일부만 볼 때는 이렇게 합니다.
+
+```bash
+python3 scripts/evaluate_local.py \
+  --base-url http://127.0.0.1:8000 \
+  --eval-file ./data/test/eval_dataset_260505.json \
+  --limit 20
+```
+
+특정 구간만 재평가할 때는 이렇게 씁니다.
+
+```bash
+python3 scripts/evaluate_local.py \
+  --base-url http://127.0.0.1:8000 \
+  --eval-file ./data/test/eval_dataset_260505.json \
+  --offset 100 \
+  --limit 20
+```
+
+결과는 기본적으로 `results/` 아래에 저장됩니다.
+
+- `summary.json`
+  - 전체 지표 요약
+- `predictions.jsonl`
+  - 문항별 retrieved_chunk_ids, answer, recall_at_5, mrr, token_f1
+
+`summary.json`의 `config_snapshot`에는 현재 env 해석 결과가 같이 남습니다. 그래서 나중에 "이 점수가 어떤 backend 조합에서 나온 거였지?"를 다시 추적할 수 있습니다.
+
+### 6. 실험 비교는 `experiment_tag`와 `index_namespace`를 같이 봅니다
+
+실험을 여러 번 돌릴 때는 아래처럼 생각하면 편합니다.
+
+- `FAIRDATA_INDEX_NAMESPACE`
+  - 어떤 인덱스를 읽을지 구분하는 이름
+- `FAIRDATA_EXPERIMENT_TAG`
+  - 결과 파일에서 이 실행을 식별하는 이름
+
+보통은 둘 다 같이 바꿔 주는 게 덜 헷갈립니다.
+
+- backend 조합이 달라졌다
+  - `INDEX_NAMESPACE`도 바꾸기
+  - 필요하면 `build_indexes.py` 다시 실행
+- 같은 backend 조합인데 reranker weight나 LLM만 바꿨다
+  - `EXPERIMENT_TAG`만 바꿔도 비교 가능
+
+### 7. 가장 현실적인 실험 루틴
+
+root 기준으로 실제로는 아래 순서로 반복하면 됩니다.
+
+1. env export로 실험 조합 설정
+2. `python3 scripts/validate_model_matrix.py`
+3. 필요할 때만 `python3 scripts/build_indexes.py`
+4. `uvicorn server:app --host 0.0.0.0 --port 8000`
+5. `curl /health`
+6. `curl /predict` 샘플 1건
+7. `python3 scripts/evaluate_local.py --eval-file ./data/test/eval_dataset_260505.json`
+8. `results/.../summary.json` 비교
 
 ## 준비 절차
 
@@ -468,6 +719,10 @@ python3 scripts/evaluate_local.py \
 ## 현재 환경에서 확인한 사항
 
 이 README는 코드 전체를 읽고 현재 워크스페이스 상태까지 반영해서 작성했습니다.
+
+마지막 확인 시각:
+
+- `2026-06-05 11:59:53 KST`
 
 확인 결과:
 

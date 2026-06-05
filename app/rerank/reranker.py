@@ -20,6 +20,7 @@ class TransformerSequenceClassificationReranker:
         self.rerank_weight = 1.0
 
     def ensure_runtime(self) -> None:
+        # 실제 추론이 필요할 때만 tokenizer/model을 로드합니다.
         if self.model is not None and self.tokenizer is not None:
             return
         try:
@@ -38,6 +39,7 @@ class TransformerSequenceClassificationReranker:
         self.model.to(self.device)
 
     def entity_boost(self, analysis: QueryAnalysis, document: Document) -> float:
+        # 질문에 문서명이나 회사명이 직접 등장하면 soft boost를 더합니다.
         boost = 0.0
         if document.normalized_doc_name and document.normalized_doc_name in analysis.normalized_question:
             boost += 3.0
@@ -48,6 +50,7 @@ class TransformerSequenceClassificationReranker:
         return boost
 
     def build_pair_text(self, analysis: QueryAnalysis, chunk_id: str) -> tuple[str, str] | None:
+        # cross-encoder 입력용 (query, passage) 쌍을 구성합니다.
         chunk = self.corpus_store.chunk_map.get(chunk_id)
         if chunk is None:
             return None
@@ -65,6 +68,7 @@ class TransformerSequenceClassificationReranker:
 
     @torch.inference_mode()
     def score_pairs(self, pairs: list[tuple[str, str]]) -> list[float]:
+        # query-passage 쌍 전체를 한 번에 점수화해 리랭커 raw score를 반환합니다.
         self.ensure_runtime()
         if not pairs:
             return []
@@ -90,6 +94,8 @@ class TransformerSequenceClassificationReranker:
         *,
         top_n: int = 50,
     ) -> list[RankedChunk]:
+        # fusion 상위 후보만 cross-encoder로 다시 보고,
+        # fusion 점수 + reranker 점수 + entity boost를 합쳐 최종 정렬합니다.
         candidate_ids = [
             chunk_id
             for chunk_id, _ in sorted(fused_scores.items(), key=lambda item: (item[1], item[0]), reverse=True)[:top_n]

@@ -12,6 +12,7 @@ from app.utils.text import normalize_name, tokenize_text
 
 @dataclass(frozen=True)
 class Chunk:
+    # 검색과 생성이 함께 참조하는 최소 청크 단위입니다.
     chunk_id: str
     doc_id: str
     doc_name: str
@@ -28,6 +29,7 @@ class Chunk:
 
 @dataclass(frozen=True)
 class Document:
+    # 문서 단위 메타데이터와 대표 텍스트를 보관하는 객체입니다.
     doc_id: str
     doc_name: str
     normalized_doc_name: str
@@ -40,6 +42,7 @@ class Document:
 
 @dataclass
 class CorpusStore:
+    # 문서/청크 전체와 빠른 조회용 맵을 함께 들고 있는 코퍼스 저장소입니다.
     documents: list[Document] = field(default_factory=list)
     chunks: list[Chunk] = field(default_factory=list)
     document_map: dict[str, Document] = field(default_factory=dict)
@@ -62,6 +65,8 @@ def iter_hybrid_files(data_dir: Path) -> list[Path]:
 
 # 메타데이터 JSON과 하이브리드 JSON을 문서 단위로 짝지어 반환합니다.
 def iter_document_pairs(data_dir: Path) -> list[tuple[Path, Path]]:
+    # 메타데이터 파일이 있으면 metadata-hybrid 쌍을 사용하고,
+    # 없으면 hybrid 파일 하나만으로도 로딩이 가능하게 fallback 합니다.
     metadata_files = sorted(data_dir.glob("*_metadata.json"))
     pairs: list[tuple[Path, Path]] = []
     for metadata_path in metadata_files:
@@ -75,6 +80,7 @@ def iter_document_pairs(data_dir: Path) -> list[tuple[Path, Path]]:
 
 # 피심인 메타데이터에서 회사명과 위반유형 목록을 추출합니다.
 def extract_document_metadata(meta: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    # 피심인 목록에서 회사명과 위반유형을 펼쳐 문서 대표 메타데이터로 만듭니다.
     defendant_info = meta.get(DEFENDANT_INFO_KEY, []) or []
     company_names = tuple(
         item.get(COMPANY_NAME_KEY, "").strip()
@@ -100,12 +106,14 @@ def build_document_text(
     violation_types: tuple[str, ...],
     preview_text: str,
 ) -> str:
+    # 라우팅과 문서 수준 검색 보조 신호에 사용할 대표 문자열을 만듭니다.
     parts = [doc_name, *company_names, *violation_types, preview_text]
     return " ".join(part for part in parts if part).strip()
 
 
 # 중복 청크를 줄이기 위해 문서 내부에서 동일 본문은 한 번만 유지합니다.
 def deduplicate_chunk_records(records: list[dict]) -> list[dict]:
+    # 동일 문서 안에서 사실상 같은 본문이 반복되면 첫 번째만 남깁니다.
     deduplicated: list[dict] = []
     seen_texts: set[str] = set()
     for record in records:
@@ -130,6 +138,7 @@ def build_document(
     route: RouteDecision,
     full_text: str,
 ) -> Document:
+    # 로딩 단계에서 문서명 정규화와 토큰화까지 끝낸 Document 객체를 생성합니다.
     return Document(
         doc_id=doc_id,
         doc_name=doc_name,
@@ -152,6 +161,7 @@ def build_chunk(
     route: RouteDecision,
     record: dict,
 ) -> Chunk | None:
+    # chunk_id 또는 본문이 비어 있으면 검색 후보로 쓸 수 없으므로 건너뜁니다.
     metadata = record.get("metadata", {})
     chunk_id = str(metadata.get("chunk_id", "")).strip()
     content = str(record.get("page_content", "")).strip()
@@ -177,6 +187,8 @@ def build_chunk(
         )
         if part
     ).strip()
+    # enriched_text에는 문서명, 위반유형, 라우팅 메타데이터를 함께 넣어
+    # dense/sparse 검색에서 본문 외 신호도 활용할 수 있게 합니다.
     return Chunk(
         chunk_id=chunk_id,
         doc_id=doc_id,
@@ -195,6 +207,7 @@ def build_chunk(
 
 # 코퍼스 디렉터리를 읽어 문서와 청크 저장소를 구성합니다.
 def load_corpus(data_dir: Path, route_text_fn: Callable[[str], RouteDecision]) -> CorpusStore:
+    # raw 코퍼스를 순회하면서 문서/청크 객체와 조회용 맵을 한 번에 구성합니다.
     store = CorpusStore()
     for metadata_path, hybrid_path in iter_document_pairs(data_dir):
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))

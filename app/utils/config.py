@@ -6,6 +6,12 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
+# 이 파일은 프로젝트 전역 설정의 "단일 해석 지점" 역할을 합니다.
+# 단순히 env 값을 읽는 데서 끝나지 않고,
+# 1) 다양한 표기 입력을 내부 backend 키로 정규화하고
+# 2) backend 별 기본 모델 경로를 결정하고
+# 3) 검색 경로 조합이 현재 구현 제약에 맞는지 검증합니다.
+
 # 외부 env 값은 표기법이 제각각일 수 있으므로 내부에서 한 번 정규화합니다.
 def _normalize_backend_name(name: str) -> str:
     return name.strip().lower().replace("-", "_").replace(".", "_").replace("/", "_")
@@ -183,6 +189,8 @@ LLM_MODEL_DIR_BY_BACKEND: dict[str, Path] = {
 }
 
 
+# env 파싱 유틸리티입니다.
+# 개별 모듈이 직접 os.getenv 를 호출하지 않게 해서 파싱 규칙을 한곳에 모읍니다.
 def _get_env_str(name: str, default: str) -> str:
     return os.getenv(name, default).strip()
 
@@ -206,6 +214,8 @@ def _resolve_model_dir(
     default_map: dict[str, Path],
     fallback: Path,
 ) -> Path:
+    # 특정 경로 env 가 있으면 그것을 최우선으로 쓰고,
+    # 없으면 backend 별 기본 경로 테이블에서 찾아 반환합니다.
     custom = os.getenv(env_name)
     if custom:
         return Path(custom)
@@ -213,12 +223,17 @@ def _resolve_model_dir(
 
 
 def _resolve_backend_alias(env_name: str, default: str, alias_map: dict[str, str]) -> str:
+    # env 입력은 실제 HF repo 이름, 로컬 폴더명, 축약형 등 다양할 수 있으므로
+    # 내부 비교/분기에는 항상 canonical backend 키를 사용합니다.
     raw = _get_env_str(env_name, default)
     normalized = _normalize_backend_name(raw)
     return alias_map.get(normalized, normalized)
 
 
 def _resolve_llm_model_selection() -> str:
+    # LLM은 backend family(qwen/exaone/llama3)와 실제 체크포인트 선택을 분리합니다.
+    # 예를 들어 FAIRDATA_LLM_BACKEND=qwen3-8b 이면 family는 qwen 이지만
+    # 실제 모델 디렉터리는 qwen3_8b 쪽을 선택해야 하므로 별도 selection map을 씁니다.
     raw = _get_env_str("FAIRDATA_LLM_BACKEND", "qwen")
     normalized = _normalize_backend_name(raw)
     return LLM_MODEL_SELECTION_ALIASES.get(normalized, resolve_llm_backend_name())
@@ -316,6 +331,8 @@ def resolve_index_root_dir() -> Path:
 
 # 인덱스 namespace를 반환합니다 (실험별 인덱스 격리).
 def resolve_index_namespace() -> str:
+    # 어떤 backend 조합으로 만든 인덱스인지 namespace 에 반영해
+    # 실험별 인덱스 파일/디렉터리가 서로 덮어쓰지 않게 합니다.
     default_parts = [
         f"dense_{resolve_dense_backend_name()}" if is_dense_enabled() else "dense_off",
         f"sparse_{resolve_sparse_backend_name()}" if is_sparse_enabled() else "sparse_off",
@@ -407,6 +424,8 @@ def resolve_multivector_path_top_k(default_top_k: int) -> int:
 
 
 def get_backend_capabilities(backend_name: str) -> dict[str, bool]:
+    # 상위 파이프라인이 "이 backend 가 dense/sparse/multivector 중 무엇을 지원하는가"를
+    # 빠르게 조회할 수 있도록 capability 테이블을 노출합니다.
     normalized = _normalize_backend_name(backend_name)
     return RETRIEVAL_BACKEND_CAPABILITIES.get(
         normalized,
@@ -415,6 +434,8 @@ def get_backend_capabilities(backend_name: str) -> dict[str, bool]:
 
 
 def resolve_sparse_backend_kind() -> str:
+    # sparse 는 BM25 같은 lexical 계열과 BGE-M3 같은 learned sparse 계열이 다르므로
+    # fusion/profile/검증 로직에서 사용할 추상 분류를 제공합니다.
     return SPARSE_BACKEND_KINDS.get(resolve_sparse_backend_name(), "unknown_sparse")
 
 
@@ -427,6 +448,8 @@ def is_learned_sparse_backend() -> bool:
 
 
 def resolve_retrieval_profile() -> str:
+    # 현재 enable 플래그와 backend 종류를 바탕으로
+    # 실험/로그/메트릭에 남길 retrieval 조합 이름을 계산합니다.
     dense_enabled = is_dense_enabled()
     sparse_enabled = is_sparse_enabled()
     multivector_enabled = is_multivector_enabled()
@@ -453,6 +476,9 @@ def resolve_retrieval_profile() -> str:
 
 
 def validate_retrieval_configuration() -> None:
+    # 현재 구현이 지원하지 않는 backend 조합은 검색 시작 전에 즉시 차단합니다.
+    # 특히 learned sparse 와 multivector 는 동일 family 공유를 전제로 구현되어 있어
+    # 설정은 가능해 보여도 런타임에서 깨질 조합을 여기서 미리 막습니다.
     dense_enabled = is_dense_enabled()
     sparse_enabled = is_sparse_enabled()
     multivector_enabled = is_multivector_enabled()

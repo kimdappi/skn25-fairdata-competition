@@ -14,6 +14,7 @@ from app.rerank.reranker import (
 
 
 def _normalize_backend_name(backend_name: str) -> str:
+    # env나 문서에 적힌 reranker 이름을 내부 비교용 형태로 정규화합니다.
     return backend_name.strip().lower().replace("-", "_").replace(".", "_")
 
 
@@ -22,6 +23,7 @@ def build_reranker_backend(
     corpus_store: CorpusStore,
     model_dir: Path,
 ) -> RerankerBackend:
+    # 설정 문자열을 실제 리랭커 구현체로 변환하는 팩토리 함수입니다.
     alias = _normalize_backend_name(backend_name)
     if alias in {"bge_reranker", "bge_reranker_v2_m3"}:
         return BGERerankerV2M3(corpus_store, model_dir)

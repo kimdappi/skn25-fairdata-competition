@@ -17,3 +17,4 @@ class RerankerBackend(Protocol):
         *,
         top_n: int = 50,
     ) -> list[RankedChunk]: ...
+    # fused_scores 상위 후보를 다시 점수화해 최종 RankedChunk 목록을 반환합니다.
