@@ -87,16 +87,20 @@ class DenseSearchEngine:
         manifest = load_manifest(self.manifest_path)
         current_count = collection.count()
         expected_count = len(self.chunks)
-        if current_count != expected_count or not manifest_matches(
+        needs_rebuild = current_count != expected_count or not manifest_matches(
             manifest,
             fingerprint=self.chunk_fingerprint,
             count=expected_count,
-        ):
+        )
+        if needs_rebuild:
             try:
                 client.delete_collection(self.collection_name)
             except Exception:
                 pass
-            collection = client.get_or_create_collection(name=self.collection_name)
+            collection = client.create_collection(
+                name=self.collection_name,
+                metadata={"hnsw:search_ef": 100},
+            )
             self.populate_collection(collection)
             write_manifest(
                 self.manifest_path,
@@ -110,8 +114,8 @@ class DenseSearchEngine:
         return collection
 
     # BGE-M3 dense embedding을 Chroma 컬렉션에 적재합니다.
-    def populate_collection(self, collection) -> None:
-        embeddings = self.backend.encode_documents(self.chunk_texts).tolist()
+    # 24GB GPU에서 메모리 초과를 방지하기 위해 500개 단위로 배치 처리합니다.
+    def populate_collection(self, collection, batch_size: int = 500) -> None:
         documents = [chunk.content for chunk in self.chunks]
         metadatas = [
             {
@@ -122,12 +126,20 @@ class DenseSearchEngine:
             }
             for chunk in self.chunks
         ]
-        collection.add(
-            ids=self.chunk_ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=metadatas,
-        )
+
+        total = len(self.chunks)
+        for start in range(0, total, batch_size):
+            end = min(start + batch_size, total)
+            batch_texts = self.chunk_texts[start:end]
+            batch_embeddings = self.backend.encode_documents(batch_texts).tolist()
+            collection.add(
+                ids=self.chunk_ids[start:end],
+                embeddings=batch_embeddings,
+                documents=documents[start:end],
+                metadatas=metadatas[start:end],
+            )
+            print(f"[DenseSearchEngine] inserted {end}/{total}")
+        print(f"[DenseSearchEngine] populate_collection complete: {total} chunks")
 
     # dense 질의 벡터를 생성합니다.
     def encode_query(self, analysis: QueryAnalysis) -> list[float]:
@@ -139,7 +151,7 @@ class DenseSearchEngine:
         if not query_vector:
             return []
 
-        fetch_k = max(top_k * 8, 50)
+        fetch_k = max(top_k * 6, 30)
         result = self.collection.query(
             query_embeddings=[query_vector],
             n_results=fetch_k,
