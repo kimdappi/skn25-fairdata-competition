@@ -4,7 +4,7 @@ cd /workspace/skn25-fairdata-competition
 
 # HTML 기준 E4 + LLM route tags:
 # dense model(e5) + BM25 + reranker + route-tag candidate filtering
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=0,1
 export PYTHONUNBUFFERED=1
 export FAIRDATA_BERTSCORE_DEVICE=cpu
 export FAIRDATA_ENABLE_DENSE=1
@@ -15,6 +15,11 @@ export FAIRDATA_SPARSE_BACKEND=bm25
 export FAIRDATA_ROUTE_FILTER=1
 export FAIRDATA_ROUTE_MIN_CANDIDATE_DOCS=20
 export FAIRDATA_ROUTE_MAX_CONCURRENCY=4
+export FAIRDATA_ROUTE_MAX_NEW_TOKENS=64
+export FAIRDATA_GENERATION_MAX_INPUT_CHARS=3500
+export FAIRDATA_GENERATION_MAX_NEW_TOKENS=160
+export FAIRDATA_LLM_DEVICE=cuda:0
+export FAIRDATA_RERANK_DEVICE=cuda:1
 export FAIRDATA_ROUTE_TAGS_PATH=cache/routes/V2-E4-E5-BM25-ROUTE/route_tags.json
 export FAIRDATA_INDEX_NAMESPACE=v2_e4_e5_bm25_route_tags
 export FAIRDATA_EXPERIMENT_TAG=V2-E4-E5-BM25-ROUTE
@@ -34,6 +39,7 @@ python3 -u scripts/build_route_tags.py \
   --eval-file ./data/test/eval_dataset_260505.json \
   --output-file "$FAIRDATA_ROUTE_TAGS_PATH" \
   --router-backend llm \
+  --documents-only \
   --max-concurrency "$FAIRDATA_ROUTE_MAX_CONCURRENCY" \
   | tee "$RESULTS_DIR/route_tags.log"
 

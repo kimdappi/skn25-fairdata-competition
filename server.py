@@ -7,7 +7,7 @@ from app.generation.generator import build_llm_backend
 from app.preprocessing.corpus import load_corpus
 from app.retrieval.retriever import HybridRetriever
 from app.retrieval.router import QueryRouter
-from app.retrieval.route_tags import CachedQuestionRouter, RouteTagStore
+from app.retrieval.route_tags import OnlineLLMQuestionRouter, RouteTagStore
 from app.utils.config import (
     resolve_data_dir,
     resolve_dense_backend_name,
@@ -41,10 +41,11 @@ validate_selected_model_directories()
 app = FastAPI(title=APP_TITLE)
 fallback_router = QueryRouter()
 route_tag_store = RouteTagStore.load(resolve_route_tags_path())
-router = CachedQuestionRouter(fallback_router, route_tag_store)
+generator = build_llm_backend()
+router = OnlineLLMQuestionRouter(fallback_router, generator.route_question)
 corpus = load_corpus(
     DATA_DIR,
-    router.route_from_text,
+    fallback_router.route_from_text,
     route_document_fn=lambda doc_id, text: route_tag_store.route_document(
         doc_id,
         text,
@@ -52,7 +53,6 @@ corpus = load_corpus(
     ),
 )
 retriever = HybridRetriever(corpus, router)
-generator = build_llm_backend()
 
 
 @app.get("/health")
@@ -67,6 +67,7 @@ def health() -> dict[str, str | int | bool]:
         "sparse_backend_kind": resolve_sparse_backend_kind(),
         "multivector_backend": resolve_multivector_backend_name(),
         "route_tags_loaded": bool(route_tag_store.documents or route_tag_store.questions_by_key),
+        "question_routing": "online_llm",
     }
 
 

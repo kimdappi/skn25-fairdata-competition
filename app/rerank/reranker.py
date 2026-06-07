@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import torch
@@ -14,7 +15,10 @@ class TransformerSequenceClassificationReranker:
     def __init__(self, corpus_store: CorpusStore, model_dir: Path) -> None:
         self.corpus_store = corpus_store
         self.model_dir = Path(model_dir)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        preferred_device = os.getenv("FAIRDATA_RERANK_DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
+        if preferred_device == "cuda" and not torch.cuda.is_available():
+            preferred_device = "cpu"
+        self.device = torch.device(preferred_device)
         self.tokenizer = None
         self.model = None
         self.rerank_weight = 1.0
@@ -81,11 +85,16 @@ class TransformerSequenceClassificationReranker:
             return_tensors="pt",
         )
         encoded = {key: value.to(self.device) for key, value in encoded.items()}
-        output = self.model(**encoded)
-        logits = output.logits
-        if logits.ndim > 1:
-            logits = logits[:, 0]
-        return [float(score) for score in logits.view(-1).float().cpu().tolist()]
+        try:
+            output = self.model(**encoded)
+            logits = output.logits
+            if logits.ndim > 1:
+                logits = logits[:, 0]
+            return [float(score) for score in logits.view(-1).float().cpu().tolist()]
+        finally:
+            del encoded
+            if self.device.type == "cuda":
+                torch.cuda.empty_cache()
 
     def rerank_chunks(
         self,

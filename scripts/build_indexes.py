@@ -16,7 +16,7 @@ from app.retrieval.backends import (
 )
 from app.retrieval.engines import DenseSearchEngine, MultiVectorSearchEngine, SparseSearchEngine
 from app.retrieval.router import QueryRouter
-from app.retrieval.route_tags import CachedQuestionRouter, RouteTagStore
+from app.retrieval.route_tags import RouteTagStore
 from app.utils.config import (
     is_dense_enabled,
     is_multivector_enabled,
@@ -46,10 +46,9 @@ def main() -> None:
 
     fallback_router = QueryRouter()
     route_tag_store = RouteTagStore.load(resolve_route_tags_path())
-    router = CachedQuestionRouter(fallback_router, route_tag_store)
     corpus = load_corpus(
         data_dir,
-        router.route_from_text,
+        fallback_router.route_from_text,
         route_document_fn=lambda doc_id, text: route_tag_store.route_document(
             doc_id,
             text,

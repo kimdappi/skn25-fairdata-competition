@@ -44,6 +44,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-document-chars", type=int, default=2500)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--documents-only",
+        action="store_true",
+        help="문서 태그만 생성하고 질문 태그는 출력 파일에서 비웁니다.",
+    )
+    parser.add_argument(
         "--keep-fallback-cache",
         action="store_true",
         help="LLM 백엔드에서도 기존 fallback 태그를 재처리하지 않고 그대로 사용합니다.",
@@ -253,6 +258,8 @@ def main() -> None:
     args = parse_args()
     router = QueryRouter()
     output = load_existing_output(args.output_file, force=args.force)
+    if args.documents_only:
+        output["questions"] = {}
     retry_fallbacks = args.router_backend == "llm" and not args.keep_fallback_cache
 
     document_inputs = [
@@ -265,16 +272,19 @@ def main() -> None:
             retry_fallbacks=retry_fallbacks,
         )
     ]
-    question_inputs = [
-        item
-        for item in load_question_inputs(args.eval_file)
-        if should_process_question(
-            item,
-            output,
-            force=args.force,
-            retry_fallbacks=retry_fallbacks,
-        )
-    ]
+    if args.documents_only:
+        question_inputs = []
+    else:
+        question_inputs = [
+            item
+            for item in load_question_inputs(args.eval_file)
+            if should_process_question(
+                item,
+                output,
+                force=args.force,
+                retry_fallbacks=retry_fallbacks,
+            )
+        ]
 
     print(
         "[build_route_tags] pending "

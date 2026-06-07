@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,6 +14,7 @@ from app.utils.text import tokenize_text
 
 
 QUESTION_SPACE_PATTERN = re.compile(r"\s+")
+logger = logging.getLogger(__name__)
 
 
 def normalize_question_key(question: str) -> str:
@@ -97,3 +99,29 @@ class CachedQuestionRouter:
 
     def route_from_text(self, text: str) -> RouteDecision:
         return self.tag_store.route_question(text, self.fallback.route_from_text)
+
+
+class OnlineLLMQuestionRouter:
+    def __init__(
+        self,
+        fallback: QueryRouter,
+        route_question_fn: Callable[[str], RouteDecision],
+    ) -> None:
+        self.fallback = fallback
+        self.route_question_fn = route_question_fn
+        self.routes_by_key: dict[str, RouteDecision] = {}
+
+    def route_from_text(self, text: str) -> RouteDecision:
+        key = normalize_question_key(text)
+        cached = self.routes_by_key.get(key)
+        if cached is not None:
+            return cached
+
+        try:
+            route = self.route_question_fn(text)
+        except Exception as exc:
+            logger.warning("online LLM question routing failed; using rule fallback: %r", exc)
+            route = self.fallback.route_from_text(text)
+
+        self.routes_by_key[key] = route
+        return route
