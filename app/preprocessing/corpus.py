@@ -206,7 +206,11 @@ def build_chunk(
 
 
 # 코퍼스 디렉터리를 읽어 문서와 청크 저장소를 구성합니다.
-def load_corpus(data_dir: Path, route_text_fn: Callable[[str], RouteDecision]) -> CorpusStore:
+def load_corpus(
+    data_dir: Path,
+    route_text_fn: Callable[[str], RouteDecision],
+    route_document_fn: Callable[[str, str], RouteDecision] | None = None,
+) -> CorpusStore:
     # raw 코퍼스를 순회하면서 문서/청크 객체와 조회용 맵을 한 번에 구성합니다.
     store = CorpusStore()
     for metadata_path, hybrid_path in iter_document_pairs(data_dir):
@@ -219,7 +223,10 @@ def load_corpus(data_dir: Path, route_text_fn: Callable[[str], RouteDecision]) -
         company_names, violation_types = extract_document_metadata(metadata)
         preview_text = " ".join(record.get("page_content", "") for record in cleaned_records[:8]).strip()
         full_text = build_document_text(doc_name, company_names, violation_types, preview_text)
-        route = route_text_fn(full_text)
+        if route_document_fn is not None:
+            route = route_document_fn(doc_id, full_text)
+        else:
+            route = route_text_fn(full_text)
 
         document = build_document(
             doc_id=doc_id,

@@ -30,6 +30,8 @@ from app.utils.config import (
     resolve_multivector_backend_name,
     resolve_multivector_model_dir,
     resolve_multivector_path_top_k,
+    is_route_filter_enabled,
+    resolve_route_min_candidate_docs,
     resolve_sparse_backend_name,
     resolve_sparse_model_dir,
     resolve_sparse_path_top_k,
@@ -112,6 +114,36 @@ def compute_route_bonus(analysis: QueryAnalysis, chunk: Chunk) -> float:
     return bonus
 
 
+def select_candidate_doc_ids(
+    analysis: QueryAnalysis,
+    corpus_store: CorpusStore,
+    *,
+    min_candidate_docs: int,
+) -> set[str] | None:
+    route = analysis.route
+    if route.theme == "기타":
+        return None
+
+    theme_doc_ids = {
+        document.doc_id
+        for document in corpus_store.documents
+        if document.route.theme == route.theme
+    }
+    if len(theme_doc_ids) < min_candidate_docs:
+        return None
+
+    if route.industry != "기타":
+        refined_doc_ids = {
+            document.doc_id
+            for document in corpus_store.documents
+            if document.doc_id in theme_doc_ids and document.route.industry == route.industry
+        }
+        if len(refined_doc_ids) >= min_candidate_docs:
+            return refined_doc_ids
+
+    return theme_doc_ids
+
+
 class ScoreFusion:
     # RRF를 쓰지 않을 때 경로별 raw score를 정규화해 합산합니다.
     def fuse(self, traces: dict[str, list[RetrievalHit]], weights: dict[str, float]) -> dict[str, float]:
@@ -157,6 +189,8 @@ class HybridSearchPipeline:
         self.rerank_top_n = resolve_reranker_top_n()
         self.rerank_weight = resolve_reranker_weight()
         self.retrieval_profile = resolve_retrieval_profile()
+        self.enable_route_filter = is_route_filter_enabled()
+        self.route_min_candidate_docs = resolve_route_min_candidate_docs()
         validate_retrieval_configuration()
 
         if not any([self.enable_dense, self.enable_sparse, self.enable_multivector]):
@@ -232,7 +266,7 @@ class HybridSearchPipeline:
     ) -> RetrievalTrace:
         self.ensure_runtime()
         trace = RetrievalTrace()
-        default_path_top_k = max(top_k * 6, 30)
+        default_path_top_k = max(top_k * 20, 100) if self.enable_route_filter else max(top_k * 6, 30)
 
         # 각 engine 은 동일한 search 시그니처를 가지므로,
         # 파이프라인은 경로별 top_k 조정만 하고 실행 자체는 공통 흐름으로 다룹니다.
@@ -285,6 +319,38 @@ class HybridSearchPipeline:
         )
         return fused_scores
 
+    def filter_fused_scores_by_route(
+        self,
+        analysis: QueryAnalysis,
+        fused_scores: dict[str, float],
+        *,
+        top_k: int,
+    ) -> dict[str, float]:
+        if not self.enable_route_filter or not fused_scores:
+            return fused_scores
+
+        candidate_doc_ids = select_candidate_doc_ids(
+            analysis,
+            self.corpus_store,
+            min_candidate_docs=self.route_min_candidate_docs,
+        )
+        if not candidate_doc_ids:
+            return fused_scores
+
+        candidate_chunk_ids = {
+            chunk_id
+            for doc_id in candidate_doc_ids
+            for chunk_id in self.corpus_store.document_to_chunk_ids.get(doc_id, [])
+        }
+        filtered_scores = {
+            chunk_id: score
+            for chunk_id, score in fused_scores.items()
+            if chunk_id in candidate_chunk_ids
+        }
+        if len(filtered_scores) < top_k:
+            return fused_scores
+        return filtered_scores
+
     # 최종 파이프라인을 실행해 평가용 상위 청크를 반환합니다.
     def search(self, question: str, top_k: int = 5) -> list[Chunk]:
         # 전체 흐름:
@@ -292,6 +358,7 @@ class HybridSearchPipeline:
         analysis = self.analyze_query(question)
         trace = self.run_retrieval_paths(analysis, top_k=top_k)
         fused_scores = self.fuse_hits(analysis, trace)
+        fused_scores = self.filter_fused_scores_by_route(analysis, fused_scores, top_k=top_k)
         if self.rerank_weight <= 0:
             ranked_chunks = [
                 RankedChunk(

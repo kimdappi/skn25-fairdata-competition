@@ -16,6 +16,7 @@ from app.retrieval.backends import (
 )
 from app.retrieval.engines import DenseSearchEngine, MultiVectorSearchEngine, SparseSearchEngine
 from app.retrieval.router import QueryRouter
+from app.retrieval.route_tags import CachedQuestionRouter, RouteTagStore
 from app.utils.config import (
     is_dense_enabled,
     is_multivector_enabled,
@@ -26,6 +27,7 @@ from app.utils.config import (
     resolve_index_root_dir,
     resolve_multivector_backend_name,
     resolve_multivector_model_dir,
+    resolve_route_tags_path,
     resolve_retrieval_profile,
     resolve_sparse_backend_name,
     resolve_sparse_model_dir,
@@ -42,10 +44,24 @@ def main() -> None:
     print(f"[build_indexes] index_dir={index_dir}")
     print(f"[build_indexes] retrieval_profile={resolve_retrieval_profile()}")
 
-    router = QueryRouter()
-    corpus = load_corpus(data_dir, router.route_from_text)
+    fallback_router = QueryRouter()
+    route_tag_store = RouteTagStore.load(resolve_route_tags_path())
+    router = CachedQuestionRouter(fallback_router, route_tag_store)
+    corpus = load_corpus(
+        data_dir,
+        router.route_from_text,
+        route_document_fn=lambda doc_id, text: route_tag_store.route_document(
+            doc_id,
+            text,
+            fallback_router.route_from_text,
+        ),
+    )
     print(
         f"[build_indexes] loaded corpus: documents={len(corpus.documents)} chunks={len(corpus.chunks)}"
+    )
+    print(
+        "[build_indexes] route tags: "
+        f"documents={len(route_tag_store.documents)} questions={len(route_tag_store.questions_by_id)}"
     )
 
     runtime_cache: dict[tuple[str, Path], object] = {}

@@ -26,3 +26,14 @@ class RouteDecision(BaseModel):
     industry: str = Field(description="질문에 드러난 업종")
     focus: str = Field(description="질문 초점")
     keywords: List[str] = Field(description="질문 핵심 키워드")
+
+
+class LLMRouteDecision(BaseModel):
+    # LLM 라우터가 생성하는 태그 원본입니다. 검색에는 RouteDecision으로 변환해 사용합니다.
+    theme: str
+    company_size: str
+    legal_role: str
+    industry: str
+    focus: str
+    confidence: float = 0.0
+    reason: str = ""

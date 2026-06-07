@@ -225,6 +225,28 @@ def resolve_data_dir() -> Path:
     return BASE_DIR / "data" / "raw"
 
 
+def _resolve_optional_path(env_name: str) -> Path | None:
+    raw = os.getenv(env_name, "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    return BASE_DIR / path
+
+
+def resolve_route_tags_path() -> Path | None:
+    return _resolve_optional_path("FAIRDATA_ROUTE_TAGS_PATH")
+
+
+def is_route_filter_enabled() -> bool:
+    return _get_env_bool("FAIRDATA_ROUTE_FILTER", False)
+
+
+def resolve_route_min_candidate_docs() -> int:
+    return _get_env_int("FAIRDATA_ROUTE_MIN_CANDIDATE_DOCS", 20)
+
+
 # 검색 경로 공통 기본 BGE-M3 모델 디렉터리를 반환합니다.
 def resolve_bgem3_model_dir() -> Path:
     return _embedding_model_dir("bge-m3")
