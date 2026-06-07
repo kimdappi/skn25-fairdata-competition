@@ -4,13 +4,13 @@ set -euo pipefail
 # Hugging Face에서 검색/생성 모델을 내려받고 제출 코드가 기대하는 위치를 만듭니다.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-BGEM3_MODEL_DIR="${FAIRDATA_BGEM3_MODEL_DIR:-${PROJECT_DIR}/models/bge-m3}"
-BGE_RERANKER_MODEL_DIR="${FAIRDATA_BGE_RERANKER_MODEL_DIR:-${PROJECT_DIR}/models/bge-reranker-v2-m3}"
-QWEN_MODEL_DIR="${FAIRDATA_QWEN_MODEL_DIR:-${PROJECT_DIR}/models/qwen2-7b-instruct}"
+BGEM3_MODEL_DIR="${FAIRDATA_BGEM3_MODEL_DIR:-${PROJECT_DIR}/models/embedding/bge-m3}"
+BGE_RERANKER_MODEL_DIR="${FAIRDATA_BGE_RERANKER_MODEL_DIR:-${PROJECT_DIR}/models/reranker/bge-reranker-v2-m3}"
+QWEN_MODEL_DIR="${FAIRDATA_QWEN_MODEL_DIR:-${PROJECT_DIR}/models/llm/qwen2.5-7b-instruct}"
 
 BGEM3_REPO_ID="${HF_REPO_ID:-BAAI/bge-m3}"
 BGE_RERANKER_REPO_ID="${BGE_RERANKER_REPO_ID:-BAAI/bge-reranker-v2-m3}"
-QWEN_REPO_ID="${QWEN_REPO_ID:-Qwen/Qwen2-7B-Instruct}"
+QWEN_REPO_ID="${QWEN_REPO_ID:-Qwen/Qwen2.5-7B-Instruct}"
 
 DOWNLOAD_BGEM3="${DOWNLOAD_BGEM3:-1}"
 DOWNLOAD_RERANKER="${DOWNLOAD_RERANKER:-1}"
@@ -45,10 +45,10 @@ if [[ "${DOWNLOAD_RERANKER}" == "1" ]]; then
 fi
 
 if [[ "${DOWNLOAD_QWEN}" == "1" ]]; then
-  download_repo "${QWEN_REPO_ID}" "${QWEN_MODEL_DIR}" "Qwen 7B"
+  download_repo "${QWEN_REPO_ID}" "${QWEN_MODEL_DIR}" "Qwen2.5 7B"
 fi
 
 echo "모델 다운로드 완료"
 echo "  - BGE-M3: ${BGEM3_MODEL_DIR}"
 echo "  - Reranker: ${BGE_RERANKER_MODEL_DIR}"
-echo "  - Qwen 7B: ${QWEN_MODEL_DIR}"
+echo "  - Qwen2.5 7B: ${QWEN_MODEL_DIR}"

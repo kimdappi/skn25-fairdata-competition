@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from bert_score import score as bert_score
+import torch
 from ranx import Qrels, Run, evaluate as ranx_evaluate
 
 from app.utils.config import (
@@ -32,9 +33,6 @@ from app.utils.config import (
 
 
 # ── config_snapshot 정규화: 재현성에 필요한 키만 필터링 ──────────────────
-# 평가 결과와 함께 남길 설정 항목의 whitelist 입니다.
-# 실험을 다시 재현할 때 필요한 retrieval / reranker / LLM 관련 값만 보존하고,
-# 그 외 실행 시점의 부수적인 값은 snapshot 에서 제외합니다.
 _SNAPSHOT_KEYS: frozenset[str] = frozenset({
     "experiment_tag",
     "embed_backend",
@@ -64,50 +62,33 @@ _SNAPSHOT_KEYS: frozenset[str] = frozenset({
 
 
 def _normalize_snapshot(raw: dict[str, Any] | None) -> dict[str, Any]:
-    """실험 설정 중 재현성에 필요한 키만 필터링하여 반환합니다.
-
-    외부에서 전달된 config_snapshot 에 불필요한 키가 섞여 있어도
-    _SNAPSHOT_KEYS 에 포함된 값만 남겨 결과 파일에 기록합니다.
-    """
+    """실험 설정 중 재현성에 필요한 키만 필터링하여 반환합니다."""
     if raw is None:
         return {}
     return {k: v for k, v in raw.items() if k in _SNAPSHOT_KEYS}
 
 
 def _auto_config_snapshot() -> dict[str, Any]:
-    """config.py 의 현재 값으로 config_snapshot 을 자동 구성합니다.
-
-    호출 시점의 활성 설정을 직접 읽어 snapshot 을 만들기 때문에,
-    평가 결과만 봐도 어떤 backend / model / reranker 조합으로 실행했는지
-    추적할 수 있습니다.
-    """
+    """config.py 의 현재 값으로 config_snapshot 을 자동 구성합니다."""
     return {
-        # Dense retrieval 설정
         "embed_backend": resolve_dense_backend_name(),
         "dense_model_dir": str(resolve_dense_model_dir()),
-        # Sparse retrieval 설정
         "sparse_backend": resolve_sparse_backend_name(),
         "sparse_backend_kind": resolve_sparse_backend_kind(),
         "sparse_model_dir": str(resolve_sparse_model_dir()),
-        # Multi-vector retrieval 설정
         "multivector_backend": resolve_multivector_backend_name(),
         "multivector_model_dir": str(resolve_multivector_model_dir()),
-        # 각 retrieval 축의 활성화 여부
         "enable_dense": is_dense_enabled(),
         "enable_sparse": is_sparse_enabled(),
         "enable_multivector": is_multivector_enabled(),
-        # 어떤 retrieval profile / index namespace 로 조회했는지 기록
         "retrieval_profile": resolve_retrieval_profile(),
         "index_namespace": resolve_index_namespace(),
-        # Reranker 설정
         "rerank_backend": resolve_reranker_backend_name(),
         "rerank_model_dir": str(resolve_bge_reranker_model_dir()),
         "rerank_top_n": resolve_reranker_top_n(),
         "rerank_weight": resolve_reranker_weight(),
-        # 답변 생성에 사용한 LLM 설정
         "llm_backend": resolve_llm_backend_name(),
         "llm_model_dir": str(resolve_llm_model_dir()),
-        # predict 단계의 출력 계약을 함께 남겨 downstream 해석 기준을 고정
         "predict_io_contract": "id,retrieved_chunk_ids,answer",
     }
 
@@ -215,15 +196,36 @@ def compute_token_f1(predicted_answer: str, gold_answer: str) -> float:
 # ── BERTScore ─────────────────────────────────────────────────────────────
 
 def compute_bertscore_f1(predictions: list[str], references: list[str]) -> float | None:
+    try:
+        from bert_score import score as bert_score
+    except ImportError:
+        return None
+
     if not predictions:
         return 0.0
 
-    _, _, f1 = bert_score(
-        predictions,
-        references,
-        lang="ko",
-        verbose=False,
-    )
+    preferred_device = os.getenv("FAIRDATA_BERTSCORE_DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
+
+    try:
+        _, _, f1 = bert_score(
+            predictions,
+            references,
+            lang="ko",
+            verbose=False,
+            device=preferred_device,
+        )
+    except torch.OutOfMemoryError:
+        if preferred_device == "cpu":
+            raise
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        _, _, f1 = bert_score(
+            predictions,
+            references,
+            lang="ko",
+            verbose=False,
+            device="cpu",
+        )
     return float(f1.mean().item())
 
 

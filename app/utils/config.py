@@ -359,7 +359,7 @@ def is_sparse_enabled() -> bool:
 
 # multivector 검색 경로 사용 여부를 반환합니다.
 def is_multivector_enabled() -> bool:
-    return _get_env_bool("FAIRDATA_ENABLE_MULTIVECTOR", True)
+    return _get_env_bool("FAIRDATA_ENABLE_MULTIVECTOR", False)
 
 
 # dense 경로가 사용할 백엔드 종류를 반환합니다.

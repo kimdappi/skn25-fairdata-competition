@@ -88,7 +88,6 @@ class GroundedCausalLMBackend:
                 (
                     "답변 형식:\n"
                     "1. 질문에 대한 직접 답변 2~4문장\n"
-                    "2. 마지막 줄에 '근거 청크: ...' 형식으로 사용한 chunk_id를 쉼표로 나열"
                 ),
             ]
         )

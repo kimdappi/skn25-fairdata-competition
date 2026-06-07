@@ -63,3 +63,10 @@ def predict(req: PredictRequest) -> PredictResponse:
     chunk_ids = [chunk.chunk_id for chunk in chunks]
     answer = generator.generate(req.question, chunks)
     return PredictResponse(id=req.id, retrieved_chunk_ids=chunk_ids, answer=answer)
+
+@app.on_event("startup")
+def warmup_models() -> None:
+    retriever.pipeline.ensure_runtime()          # ① BGE-M3 (dense/sparse/multivector 공통)
+    if retriever.pipeline.reranker is not None:
+        retriever.pipeline.reranker.ensure_runtime()  # ② Reranker
+    generator.ensure_runtime()                   # ③ LLM

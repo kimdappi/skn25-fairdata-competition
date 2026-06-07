@@ -205,6 +205,10 @@ def main() -> None:
     config_snapshot["eval_file"] = str(eval_path)
     config_snapshot["base_url"] = args.base_url
 
+    with predictions_path.open("w", encoding="utf-8") as fp:
+        for row in rows:
+            fp.write(json.dumps(row, ensure_ascii=False) + "\n")
+
     summary = evaluate_predictions(
         rows,
         experiment_tag=experiment_tag,
@@ -219,9 +223,6 @@ def main() -> None:
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    with predictions_path.open("w", encoding="utf-8") as fp:
-        for row in rows:
-            fp.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     print(f"[evaluate_local] wrote summary: {summary_path}")
     print(f"[evaluate_local] wrote predictions: {predictions_path}")

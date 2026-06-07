@@ -3,7 +3,7 @@
 현재 검색 코드는 아래 경로 중 하나에서 BGE-M3 모델을 찾습니다.
 
 - 환경변수 `FAIRDATA_BGEM3_MODEL_DIR`
-- 기본 경로 `models/bge-m3`
+- 기본 경로 `models/embedding/bge-m3`
 
 검색 인덱스는 모델과 분리해서 아래 경로에 저장합니다.
 
@@ -13,12 +13,12 @@
 답변 생성기는 아래 경로에서 Qwen 모델을 찾습니다.
 
 - 환경변수 `FAIRDATA_QWEN_MODEL_DIR` 또는 `FAIRDATA_GENERATION_MODEL_DIR`
-- 기본 경로 `models/qwen2-7b-instruct`
+- 기본 경로 `models/llm/qwen2.5-7b-instruct`
 
 ## 기대 디렉터리 구조
 
 ```text
-models/bge-m3/
+models/embedding/bge-m3/
 ├── config.json
 ├── pytorch_model.bin
 ├── tokenizer.json
@@ -41,11 +41,11 @@ source .venv/bin/activate
 bash scripts/download_bgem3_model.sh
 ```
 
-이 스크립트는 기본적으로 아래 모델을 모두 `models/` 아래에 내려받습니다.
+이 스크립트는 기본적으로 아래 모델을 기능군별 canonical 경로에 내려받습니다.
 
-- `models/bge-m3`
-- `models/bge-reranker-v2-m3`
-- `models/qwen2-7b-instruct`
+- `models/embedding/bge-m3`
+- `models/reranker/bge-reranker-v2-m3`
+- `models/llm/qwen2.5-7b-instruct`
 
 필요하면 아래 환경변수로 개별 다운로드를 끌 수 있습니다.
 
@@ -92,8 +92,8 @@ python3 scripts/evaluate_local.py --eval-file ./eval.jsonl --output-file ./eval_
 ## 환경변수 예시
 
 ```bash
-export FAIRDATA_BGEM3_MODEL_DIR="$(pwd)/models/bge-m3"
-export FAIRDATA_QWEN_MODEL_DIR="$(pwd)/models/qwen2-7b-instruct"
+export FAIRDATA_BGEM3_MODEL_DIR="$(pwd)/models/embedding/bge-m3"
+export FAIRDATA_QWEN_MODEL_DIR="$(pwd)/models/llm/qwen2.5-7b-instruct"
 export FAIRDATA_DATA_DIR="$(pwd)/data/raw"
 export FAIRDATA_INDEX_ROOT_DIR="$(pwd)/index"
 ```

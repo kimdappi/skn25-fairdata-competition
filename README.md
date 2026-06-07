@@ -314,10 +314,10 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 
 코드가 기본으로 기대하는 대표 모델 경로는 아래와 같습니다.
 
-- BGE-M3: `models/bge-m3`
+- BGE-M3: `models/embedding/bge-m3`
 - BM25 runtime placeholder: `models/bm25`
-- BGE reranker: `models/bge-reranker-v2-m3`
-- Qwen 생성 모델: `models/qwen2.5-7b-instruct`
+- BGE reranker: `models/reranker/bge-reranker-v2-m3`
+- Qwen 생성 모델: `models/llm/qwen2.5-7b-instruct`
 
 경로를 바꾸려면 [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:1) 의 반환값을 직접 수정하면 됩니다.
 
@@ -808,7 +808,7 @@ python3 scripts/evaluate_local.py \
 즉, 실제 평가를 돌리려면 최소한 아래가 먼저 필요합니다.
 
 1. `transformers` 설치
-2. `models/bge-m3`, `models/bge-reranker-v2-m3`, `models/qwen2.5-7b-instruct` 준비
+2. `models/embedding/bge-m3`, `models/reranker/bge-reranker-v2-m3`, `models/llm/qwen2.5-7b-instruct` 준비
 3. BGE-M3용 `sparse_linear.pt`, `colbert_linear.pt` 준비
 4. `python3 scripts/validate_model_matrix.py` 실행
 5. `python3 scripts/build_indexes.py` 실행
