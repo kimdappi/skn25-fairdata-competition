@@ -319,6 +319,9 @@ sparse, multivector도 같은 방식이지만 제약이 있습니다.
 - BGE reranker: `models/reranker/bge-reranker-v2-m3`
 - Qwen 생성 모델: `models/llm/qwen2.5-7b-instruct`
 
+루트 직하 alias(예: `models/qwen2.5-7b-instruct`)나 symlink는 운영 기준으로 유지하지 않습니다.
+모델 실체는 반드시 `models/{embedding,reranker,llm}` 아래 canonical 경로에만 둡니다.
+
 경로를 바꾸려면 [app/utils/config.py](/home/ming9/skn25-fairdata-competition/app/utils/config.py:1) 의 반환값을 직접 수정하면 됩니다.
 
 ## 실험 진행 가이드

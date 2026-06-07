@@ -14,6 +14,7 @@
 
 - 환경변수 `FAIRDATA_QWEN_MODEL_DIR` 또는 `FAIRDATA_GENERATION_MODEL_DIR`
 - 기본 경로 `models/llm/qwen2.5-7b-instruct`
+- root alias/symlink(`models/qwen2.5-7b-instruct`)는 유지하지 않음
 
 ## 기대 디렉터리 구조
 
@@ -42,6 +43,7 @@ bash scripts/download_bgem3_model.sh
 ```
 
 이 스크립트는 기본적으로 아래 모델을 기능군별 canonical 경로에 내려받습니다.
+빈 worktree 보조 폴더(예: `/workspace/<repo>.worktrees`)는 git에 등록되지 않았고 비어 있다면 운영상 삭제해도 됩니다.
 
 - `models/embedding/bge-m3`
 - `models/reranker/bge-reranker-v2-m3`
