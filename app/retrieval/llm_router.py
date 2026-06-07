@@ -49,9 +49,11 @@ class LangChainRouteTagger:
         model_dir: Path | None = None,
         *,
         max_new_tokens: int = 256,
+        batch_size: int = 2,
     ) -> None:
         self.model_dir = Path(model_dir) if model_dir is not None else resolve_llm_model_dir()
         self.max_new_tokens = max_new_tokens
+        self.batch_size = batch_size
         self.chain = self._build_chain()
 
     def _build_chain(self):
@@ -82,7 +84,10 @@ class LangChainRouteTagger:
             do_sample=False,
             return_full_text=False,
         )
-        llm = HuggingFacePipeline(pipeline=text_generation)
+        llm = HuggingFacePipeline(
+            pipeline=text_generation,
+            batch_size=max(1, self.batch_size),
+        )
         parser = PydanticOutputParser(pydantic_object=LLMRouteDecision)
         prompt = PromptTemplate(
             template=(
