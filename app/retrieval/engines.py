@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -80,37 +81,39 @@ class DenseSearchEngine:
         except ImportError as exc:
             raise ImportError("dense retrieval을 ChromaDB로 사용하려면 chromadb 패키지가 필요합니다.") from exc
 
-        self.chroma_dir.mkdir(parents=True, exist_ok=True)
-        client = chromadb.PersistentClient(path=str(self.chroma_dir))
-        collection = client.get_or_create_collection(name=self.collection_name)
-
         manifest = load_manifest(self.manifest_path)
-        current_count = collection.count()
         expected_count = len(self.chunks)
-        needs_rebuild = current_count != expected_count or not manifest_matches(
+        if manifest_matches(
             manifest,
             fingerprint=self.chunk_fingerprint,
             count=expected_count,
-        )
-        if needs_rebuild:
+        ):
             try:
-                client.delete_collection(self.collection_name)
+                client = chromadb.PersistentClient(path=str(self.chroma_dir))
+                collection = client.get_collection(name=self.collection_name)
+                if collection.count() == expected_count:
+                    return collection
             except Exception:
                 pass
-            collection = client.create_collection(
-                name=self.collection_name,
-                metadata={"hnsw:search_ef": 100},
-            )
-            self.populate_collection(collection)
-            write_manifest(
-                self.manifest_path,
-                {
-                    "format_version": INDEX_FORMAT_VERSION,
-                    "engine": "dense_chroma",
-                    "chunk_count": expected_count,
-                    "fingerprint": self.chunk_fingerprint,
-                },
-            )
+
+        if self.chroma_dir.exists():
+            shutil.rmtree(self.chroma_dir)
+        self.chroma_dir.mkdir(parents=True, exist_ok=True)
+        client = chromadb.PersistentClient(path=str(self.chroma_dir))
+        collection = client.create_collection(
+            name=self.collection_name,
+            metadata={"hnsw:search_ef": 100},
+        )
+        self.populate_collection(collection)
+        write_manifest(
+            self.manifest_path,
+            {
+                "format_version": INDEX_FORMAT_VERSION,
+                "engine": "dense_chroma",
+                "chunk_count": expected_count,
+                "fingerprint": self.chunk_fingerprint,
+            },
+        )
         return collection
 
     # BGE-M3 dense embedding을 Chroma 컬렉션에 적재합니다.
