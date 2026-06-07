@@ -33,6 +33,7 @@ python3 -u scripts/build_route_tags.py \
   --data-dir ./data/raw \
   --eval-file ./data/test/eval_dataset_260505.json \
   --output-file "$FAIRDATA_ROUTE_TAGS_PATH" \
+  --router-backend llm \
   --max-concurrency "$FAIRDATA_ROUTE_MAX_CONCURRENCY" \
   | tee "$RESULTS_DIR/route_tags.log"
 

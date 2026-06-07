@@ -43,6 +43,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-concurrency", type=int, default=4)
     parser.add_argument("--max-document-chars", type=int, default=2500)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--keep-fallback-cache",
+        action="store_true",
+        help="LLM 백엔드에서도 기존 fallback 태그를 재처리하지 않고 그대로 사용합니다.",
+    )
     return parser.parse_args()
 
 
@@ -94,6 +99,39 @@ def load_existing_output(path: Path, *, force: bool) -> dict[str, Any]:
     payload.setdefault("questions", {})
     payload.setdefault("summary", {})
     return payload
+
+
+def should_process_document(
+    item: dict[str, str],
+    output: dict[str, Any],
+    *,
+    force: bool,
+    retry_fallbacks: bool,
+) -> bool:
+    if force:
+        return True
+    payload = output["documents"].get(item["id"])
+    if not isinstance(payload, dict):
+        return True
+    return retry_fallbacks and bool(payload.get("fallback"))
+
+
+def should_process_question(
+    item: dict[str, str],
+    output: dict[str, Any],
+    *,
+    force: bool,
+    retry_fallbacks: bool,
+) -> bool:
+    if force:
+        return True
+    payload = output["questions"].get(item["id"])
+    if not isinstance(payload, dict):
+        return True
+    route = payload.get("route")
+    if not isinstance(route, dict):
+        return True
+    return retry_fallbacks and bool(route.get("fallback"))
 
 
 def load_document_inputs(data_dir: Path, *, max_document_chars: int) -> list[dict[str, str]]:
@@ -215,21 +253,33 @@ def main() -> None:
     args = parse_args()
     router = QueryRouter()
     output = load_existing_output(args.output_file, force=args.force)
+    retry_fallbacks = args.router_backend == "llm" and not args.keep_fallback_cache
 
     document_inputs = [
         item
         for item in load_document_inputs(args.data_dir, max_document_chars=args.max_document_chars)
-        if args.force or item["id"] not in output["documents"]
+        if should_process_document(
+            item,
+            output,
+            force=args.force,
+            retry_fallbacks=retry_fallbacks,
+        )
     ]
     question_inputs = [
         item
         for item in load_question_inputs(args.eval_file)
-        if args.force or item["id"] not in output["questions"]
+        if should_process_question(
+            item,
+            output,
+            force=args.force,
+            retry_fallbacks=retry_fallbacks,
+        )
     ]
 
     print(
         "[build_route_tags] pending "
-        f"documents={len(document_inputs)} questions={len(question_inputs)} backend={args.router_backend}"
+        f"documents={len(document_inputs)} questions={len(question_inputs)} "
+        f"backend={args.router_backend} retry_fallbacks={retry_fallbacks}"
     )
 
     if args.router_backend == "rule":
