@@ -1,0 +1,5 @@
+[build_indexes] data_dir=/home/ming9/skn25-fairdata-competition/data/raw
+[build_indexes] index_dir=/home/ming9/skn25-fairdata-competition/index
+[build_indexes] retrieval_profile=dense_lexical_hybrid
+[build_indexes] loaded corpus: documents=500 chunks=29269
+[build_indexes] route tags: documents=500 questions=0

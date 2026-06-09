@@ -6,12 +6,14 @@ from pydantic import BaseModel
 from app.generation.generator import build_llm_backend
 from app.preprocessing.corpus import load_corpus
 from app.retrieval.retriever import HybridRetriever
+from app.retrieval.router_factory import build_runtime_router
 from app.retrieval.router import QueryRouter
-from app.retrieval.route_tags import OnlineLLMQuestionRouter, RouteTagStore
+from app.retrieval.route_tags import RouteTagStore
 from app.utils.config import (
     resolve_data_dir,
     resolve_dense_backend_name,
     resolve_multivector_backend_name,
+    resolve_question_router_backend_name,
     resolve_route_tags_path,
     resolve_retrieval_profile,
     resolve_sparse_backend_name,
@@ -42,7 +44,7 @@ app = FastAPI(title=APP_TITLE)
 fallback_router = QueryRouter()
 route_tag_store = RouteTagStore.load(resolve_route_tags_path())
 generator = build_llm_backend()
-router = OnlineLLMQuestionRouter(fallback_router, generator.route_question)
+router = build_runtime_router(resolve_question_router_backend_name(), fallback=fallback_router)
 corpus = load_corpus(
     DATA_DIR,
     fallback_router.route_from_text,
@@ -67,7 +69,7 @@ def health() -> dict[str, str | int | bool]:
         "sparse_backend_kind": resolve_sparse_backend_kind(),
         "multivector_backend": resolve_multivector_backend_name(),
         "route_tags_loaded": bool(route_tag_store.documents or route_tag_store.questions_by_key),
-        "question_routing": "online_llm",
+        "question_routing": resolve_question_router_backend_name(),
     }
 
 

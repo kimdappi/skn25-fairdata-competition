@@ -26,6 +26,7 @@ from app.retrieval.keywords import (  # noqa: E402
     THEME_KEYWORDS,
 )
 from app.retrieval.llm_router import LangChainRouteTagger  # noqa: E402
+from app.retrieval.router_names import normalize_router_backend_name  # noqa: E402
 from app.retrieval.route_tags import normalize_question_key  # noqa: E402
 from app.retrieval.router import OTHER, QueryRouter  # noqa: E402
 from app.utils.schemas import LLMRouteDecision, RouteDecision  # noqa: E402
@@ -39,7 +40,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--eval-file", type=Path, required=True)
     parser.add_argument("--output-file", type=Path, required=True)
-    parser.add_argument("--router-backend", choices=["llm", "rule"], default="llm")
+    parser.add_argument(
+        "--router-backend",
+        choices=["keyword", "lcel", "lcel_prompt_boost", "rule", "llm"],
+        default="lcel",
+    )
     parser.add_argument("--max-concurrency", type=int, default=4)
     parser.add_argument("--max-document-chars", type=int, default=2500)
     parser.add_argument("--force", action="store_true")
@@ -161,6 +166,13 @@ def load_document_inputs(data_dir: Path, *, max_document_chars: int) -> list[dic
     return inputs
 
 
+def get_prompt_variant(router_backend: str) -> str:
+    normalized = normalize_router_backend_name(router_backend)
+    if normalized == "lcel_prompt_boost":
+        return "lcel_prompt_boost"
+    return "lcel"
+
+
 def load_question_inputs(eval_file: Path) -> list[dict[str, str]]:
     examples = json.loads(eval_file.read_text(encoding="utf-8"))
     inputs: list[dict[str, str]] = []
@@ -196,6 +208,7 @@ def tag_with_llm(
     *,
     tagger: LangChainRouteTagger,
     router: QueryRouter,
+    source: str,
     max_concurrency: int,
 ) -> list[dict[str, Any]]:
     if not inputs:
@@ -213,7 +226,7 @@ def tag_with_llm(
     payloads: list[dict[str, Any]] = []
     for item, result in zip(inputs, raw_results):
         if isinstance(result, LLMRouteDecision):
-            payloads.append(llm_payload(result))
+            payloads.append(llm_payload(result, source=source))
             continue
         reason = f"LLM route failed: {result!r}"
         payloads.append(
@@ -256,11 +269,12 @@ def update_summary(output: dict[str, Any]) -> None:
 
 def main() -> None:
     args = parse_args()
+    args.router_backend = normalize_router_backend_name(args.router_backend)
     router = QueryRouter()
     output = load_existing_output(args.output_file, force=args.force)
     if args.documents_only:
         output["questions"] = {}
-    retry_fallbacks = args.router_backend == "llm" and not args.keep_fallback_cache
+    retry_fallbacks = args.router_backend != "keyword" and not args.keep_fallback_cache
 
     document_inputs = [
         item
@@ -292,24 +306,26 @@ def main() -> None:
         f"backend={args.router_backend} retry_fallbacks={retry_fallbacks}"
     )
 
-    if args.router_backend == "rule":
+    if args.router_backend == "keyword":
         document_payloads = tag_with_rule(document_inputs, router)
         question_payloads = tag_with_rule(question_inputs, router)
     elif not document_inputs and not question_inputs:
         document_payloads = []
         question_payloads = []
     else:
-        tagger = LangChainRouteTagger()
+        tagger = LangChainRouteTagger(prompt_variant=get_prompt_variant(args.router_backend))
         document_payloads = tag_with_llm(
             document_inputs,
             tagger=tagger,
             router=router,
+            source=args.router_backend,
             max_concurrency=args.max_concurrency,
         )
         question_payloads = tag_with_llm(
             question_inputs,
             tagger=tagger,
             router=router,
+            source=args.router_backend,
             max_concurrency=args.max_concurrency,
         )
 

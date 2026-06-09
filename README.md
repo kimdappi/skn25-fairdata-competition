@@ -3,6 +3,17 @@
 공정거래위원회 FairData 공모전 Track 2 제출용 RAG 서버입니다.  
 현재 코드는 FastAPI 기반 `/health`, `/predict` API를 제공하고, 검색은 backend 분리형 retrieval + reranker, 생성은 env 기반 로컬 LLM 선택 구조로 구성돼 있습니다.
 
+질문 라우터는 아래 3종을 공통 팩토리로 선택할 수 있습니다.
+
+- `keyword`
+  - 기존 키워드 규칙 기반 라우팅
+- `lcel`
+  - LangChain LCEL 기반 라우팅
+- `lcel_prompt_boost`
+  - LangChain LCEL 기반 라우팅 + 강화 프롬프트
+
+서버 질문 라우터는 `FAIRDATA_QUESTION_ROUTER_BACKEND`로, 태그 생성 스크립트는 `scripts/build_route_tags.py --router-backend ...`로 맞춰 실험합니다.
+
 ## 현재 코드 구조
 
 ```text
@@ -39,6 +50,8 @@
 - `POST /predict`
   - 입력: `id`, `question`
   - 출력: `id`, `retrieved_chunk_ids`, `answer`
+
+라우터 선택은 `FAIRDATA_QUESTION_ROUTER_BACKEND`로 제어합니다. `/health`의 `question_routing` 필드에서 현재 적용된 값을 확인할 수 있습니다.
 
 루트 기준 실행 흐름은 아래와 같습니다.
 

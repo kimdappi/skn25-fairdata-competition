@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from app.retrieval.router_names import normalize_router_backend_name
+
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 MODELS_DIR = BASE_DIR / "models"
@@ -237,6 +239,11 @@ def _resolve_optional_path(env_name: str) -> Path | None:
 
 def resolve_route_tags_path() -> Path | None:
     return _resolve_optional_path("FAIRDATA_ROUTE_TAGS_PATH")
+
+
+def resolve_question_router_backend_name() -> str:
+    raw = _get_env_str("FAIRDATA_QUESTION_ROUTER_BACKEND", "keyword")
+    return normalize_router_backend_name(raw)
 
 
 def is_route_filter_enabled() -> bool:

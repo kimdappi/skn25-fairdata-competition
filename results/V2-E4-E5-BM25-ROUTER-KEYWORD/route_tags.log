@@ -1,0 +1,3 @@
+[build_route_tags] pending documents=500 questions=0 backend=keyword retry_fallbacks=False
+[build_route_tags] wrote cache/routes/V2-E4-E5-BM25-ROUTER-KEYWORD/route_tags.json
+[build_route_tags] summary={"document_count": 500, "question_count": 0, "document_fallback_count": 500, "question_fallback_count": 0}
