@@ -28,8 +28,8 @@ MODELS = [
         ],
     },
     {
-        'repo_id': 'LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct',
-        'local_dir': BASE / 'llm' / 'exaone-3.5-7.8b-instruct',
+        'repo_id': 'Qwen/Qwen2.5-7B-Instruct',
+        'local_dir': BASE / 'llm' / 'qwen2.5-7b-instruct',
         'allow_patterns': [
             'config.json', 'generation_config.json', 'tokenizer.json',
             'tokenizer_config.json', 'vocab.json', 'merges.txt',

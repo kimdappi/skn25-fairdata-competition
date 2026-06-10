@@ -8,9 +8,6 @@
 ![License](https://img.shields.io/badge/License-Competition_Internal-lightgrey.svg)
 
 **FairData RAG**는 공정거래위원회 FairData 공모전 Track 2 제출을 위해 구성한 **공정위 의결서 특화 하이브리드 RAG 시스템**입니다.
-
-> 최종 선택 실험: `V2-E5-BGEM3-DS-QM-MV-W07-TOP75-EXAONE` — BGE-M3 dense+sparse + Q-M 한정 multivector(weight 0.7) + rerank top75 + EXAONE-3.5-7.8B generation. `V2-E0`는 baseline/비교 실험이며 최종 제출 기준이 아닙니다.
-
 FastAPI 기반 `/health`, `/predict` 제출 API를 제공하며, 공정위 의결서 PDF/JSON 코퍼스를 대상으로 **dense retrieval + sparse retrieval + multi-vector retrieval + reranking + local LLM generation** 흐름을 수행합니다.
 
 핵심 목표는 평가 서버가 전달하는 질문에 대해 다음 제출 규격을 안정적으로 만족하는 것입니다.
@@ -249,7 +246,7 @@ bash scripts/download_model_matrix.sh
 # 기본 index build
 python -u scripts/build_indexes.py
 
-# 참고: V2-E0 wrapper는 baseline 재현용
+# V2-E0 wrapper 사용
 bash scripts/v2_e0_build.sh
 ```
 
@@ -262,12 +259,7 @@ export FAIRDATA_ENABLE_MULTIVECTOR=1
 export FAIRDATA_DENSE_BACKEND=bgem3
 export FAIRDATA_SPARSE_BACKEND=bgem3
 export FAIRDATA_MULTIVECTOR_BACKEND=bgem3
-export FAIRDATA_MULTIVECTOR_WEIGHT=0.7
-export FAIRDATA_MULTIVECTOR_QM_ONLY=1
-export FAIRDATA_RERANK_TOP_N=75
-export FAIRDATA_LLM_BACKEND=exaone-3.5-7.8b-instruct
-export FAIRDATA_LLM_TRUST_REMOTE_CODE=1
-export FAIRDATA_EXPERIMENT_TAG=V2-E5-BGEM3-DS-QM-MV-W07-TOP75-EXAONE
+export FAIRDATA_EXPERIMENT_TAG=V2-E0
 ```
 
 ### 🌐 Phase 3: API Server Start (`/health`, `/predict`)
@@ -276,7 +268,7 @@ export FAIRDATA_EXPERIMENT_TAG=V2-E5-BGEM3-DS-QM-MV-W07-TOP75-EXAONE
 # 직접 uvicorn 실행
 PYTHONPATH=$PWD python -m uvicorn server:app --host 0.0.0.0 --port 8000
 
-# 참고: V2-E0 wrapper는 baseline 재현용. 기본 포트는 8100
+# V2-E0 wrapper 사용. 기본 포트는 8100
 bash scripts/v2_e0_server.sh
 ```
 
@@ -306,7 +298,7 @@ python -u scripts/evaluate_local.py \
   --experiment-tag local-test \
   --timeout 120
 
-# 참고: V2-E0 wrapper는 baseline 재현용
+# V2-E0 wrapper 사용
 bash scripts/v2_e0_eval.sh
 ```
 
