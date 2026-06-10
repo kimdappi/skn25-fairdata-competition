@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /workspace/skn25-fairdata-competition
+
+export PYTHONUNBUFFERED=1
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+export FAIRDATA_BERTSCORE_DEVICE="${FAIRDATA_BERTSCORE_DEVICE:-cpu}"
+export FAIRDATA_DENSE_DEVICE="${FAIRDATA_DENSE_DEVICE:-cuda:0}"
+export FAIRDATA_LLM_DEVICE="${FAIRDATA_LLM_DEVICE:-cuda:0}"
+export FAIRDATA_SKIP_LLM_WARMUP="${FAIRDATA_SKIP_LLM_WARMUP:-1}"
+export FAIRDATA_ENABLE_DENSE=1
+export FAIRDATA_ENABLE_SPARSE=1
+export FAIRDATA_ENABLE_MULTIVECTOR=1
+export FAIRDATA_DENSE_BACKEND="${FAIRDATA_DENSE_BACKEND:-bgem3}"
+export FAIRDATA_SPARSE_BACKEND="${FAIRDATA_SPARSE_BACKEND:-bgem3}"
+export FAIRDATA_MULTIVECTOR_BACKEND="${FAIRDATA_MULTIVECTOR_BACKEND:-bgem3}"
+export FAIRDATA_MULTIVECTOR_BATCH_SIZE="${FAIRDATA_MULTIVECTOR_BATCH_SIZE:-8}"
+export FAIRDATA_MULTIVECTOR_SHARD_SIZE="${FAIRDATA_MULTIVECTOR_SHARD_SIZE:-128}"
+export FAIRDATA_EXPERIMENT_TAG="${FAIRDATA_EXPERIMENT_TAG:-V2-E0}"
+
+export V2_E0_RESULTS_DIR="${V2_E0_RESULTS_DIR:-results/V2-E0}"
+export V2_E0_PORT="${V2_E0_PORT:-8100}"
+export V2_E0_BUILD_LOG="${V2_E0_BUILD_LOG:-/tmp/v2_e0_build.log}"
+export V2_E0_BUILD_TRAP_LOG="${V2_E0_BUILD_TRAP_LOG:-/tmp/v2_e0_build.trap.log}"
+export V2_E0_BUILD_PID_FILE="${V2_E0_BUILD_PID_FILE:-/tmp/v2_e0_build.pid}"
+export V2_E0_SERVER_LOG="${V2_E0_SERVER_LOG:-/tmp/v2_e0_server.log}"
+export V2_E0_SERVER_TRAP_LOG="${V2_E0_SERVER_TRAP_LOG:-/tmp/v2_e0_server.trap.log}"
+export V2_E0_SERVER_PID_FILE="${V2_E0_SERVER_PID_FILE:-/tmp/v2_e0_server.pid}"
+export V2_E0_EVAL_LOG="${V2_E0_EVAL_LOG:-/tmp/v2_e0_eval.log}"
+export V2_E0_EVAL_TRAP_LOG="${V2_E0_EVAL_TRAP_LOG:-/tmp/v2_e0_eval.trap.log}"
+export V2_E0_EVAL_PID_FILE="${V2_E0_EVAL_PID_FILE:-/tmp/v2_e0_eval.pid}"
+export V2_E0_HEALTH_JSON="${V2_E0_HEALTH_JSON:-${V2_E0_RESULTS_DIR}/health.json}"
+export V2_E0_EVAL_FILE="${V2_E0_EVAL_FILE:-./data/test/eval_dataset_260505.json}"
+export V2_E0_EVAL_TIMEOUT="${V2_E0_EVAL_TIMEOUT:-120}"
+
+if [[ -n "${PYTHON_BIN:-}" ]]; then
+  export V2_E0_PY="$PYTHON_BIN"
+else
+  export V2_E0_PY="$(command -v python3)"
+fi
+
+mkdir -p "$V2_E0_RESULTS_DIR"
