@@ -29,7 +29,7 @@ ENV FAIRDATA_ROUTE_MAX_NEW_TOKENS=64
 
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.submission.txt ./requirements.txt
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app

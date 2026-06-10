@@ -173,8 +173,7 @@ skn25-fairdata-competition        # 📦 FairData RAG 제출 코드 루트
 │   └── exp_v2_*.sh               # retrieval 조합별 실험 스크립트
 │
 ├── Dockerfile                    # 🐳 최종 제출/실행용 Docker build
-├── requirements.txt              # 📚 Python runtime dependencies
-├── requirements.submission.txt   # 📚 제출용 최소 dependency set
+├── requirements.txt              # 📚 최종 실행/제출용 Python dependencies
 ├── download_models.py            # ⬇️ 모델 다운로드 helper
 └── server.py                     # 🚪 FastAPI API entrypoint
 ```
