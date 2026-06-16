@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ny_2nd RAG 실험설계 종합 패치노트</title>
+  <style>
+    :root {
+      --bg: #f5f5f7; --panel: #ffffff; --ink: #1d1d1f; --muted: #6e6e73;
+      --line: #d2d2d7; --accent: #0071e3; --ok: #007a3d; --warn: #b25f00;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: "SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Pretendard",sans-serif;
+      background: radial-gradient(1200px 500px at 50% -100px,#ffffff 0%,var(--bg) 55%);
+      color: var(--ink); line-height: 1.58; letter-spacing: -0.01em;
+    }
+    .wrap { max-width: none; margin: 0 auto; padding: 20px 0 88px; }
+    .hero {
+      background: linear-gradient(180deg,#ffffff 0%,#fafafc 100%);
+      border: 1px solid var(--line); border-radius: calc(var(--radius)+6px);
+      padding: 12px 8px; margin-bottom: 16px;
+    }
+    h1,h2,h3 { line-height:1.22; margin:0 0 10px; letter-spacing:-0.02em; color:var(--ink); }
+    h1 { font-size:clamp(30px,3.6vw,42px); font-weight:700; }
+    h2 { font-size:clamp(24px,2.3vw,30px); margin-top:28px; font-weight:650; }
+    h3 { font-size:clamp(18px,1.6vw,22px); margin-top:18px; font-weight:630; }
+    p,li { color:var(--ink); }
+    .muted { color:var(--muted); }
+    .chip { display:inline-block; background:#f2f2f5; border:1px solid #d8d8dc; color:#424245; border-radius:999px; font-size:12px; font-weight:550; padding:5px 11px; margin:0 8px 8px 0; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 8px; margin-top:14px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; margin-top:12px; font-size:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
+    th,td { border-bottom:1px solid #e3e3e8; border-right:1px solid #ececf0; padding:8px 8px; text-align:left; vertical-align:top; line-height:1.45; }
+    tbody tr:nth-child(even){ background:#fcfcfe; }
+    tbody tr:hover{ background:#f5f9ff; }
+    tr:last-child td{ border-bottom:0; }
+    th:last-child,td:last-child{ border-right:0; }
+    th { position:sticky; top:0; z-index:2; background:#f8f8fb; color:#3a3a3c; font-weight:620; box-shadow:inset 0 -1px 0 #e3e3e8; }
+    code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; font-size:12.5px; }
+    code { background:#f2f2f7; border:1px solid #e4e4ea; border-radius:7px; padding:0.08rem 0.38rem; color:#1d1d1f; }
+    pre { background:#fbfbfd; border:1px solid #e1e1e8; border-radius:14px; padding:14px; overflow-x:auto; color:#242426; }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .ok { color:var(--ok); font-weight:650; }
+    .warn { color:var(--warn); font-weight:650; }
+    ul,ol { margin-top:8px; padding-left:1.2rem; }
+    .toggle-controls { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .toggle-controls button { appearance:none; border:1px solid #d8d8dc; background:#fff; color:#1d1d1f; border-radius:999px; padding:7px 12px; font-size:12px; font-weight:560; cursor:pointer; }
+    .toggle-controls button:hover { background:#f6f6f8; }
+    details.chapter-toggle,details.subsection-toggle { border:1px solid var(--line); border-radius:14px; background:#fff; }
+    details.chapter-toggle { box-shadow:0 2px 12px rgba(0,0,0,0.03); }
+    details.subsection-toggle { margin-top:12px; background:#fcfcfe; }
+    details.chapter-toggle>summary,details.subsection-toggle>summary { list-style:none; cursor:pointer; user-select:none; position:relative; padding-right:32px; }
+    details.chapter-toggle>summary::-webkit-details-marker,details.subsection-toggle>summary::-webkit-details-marker{ display:none; }
+    details.chapter-toggle>summary { font-size:clamp(19px,1.8vw,25px); font-weight:650; padding:14px 14px; letter-spacing:-0.015em; }
+    details.subsection-toggle>summary { font-size:clamp(16px,1.3vw,20px); font-weight:620; padding:12px 14px; color:#2c2c2e; }
+    details.chapter-toggle>summary::after,details.subsection-toggle>summary::after { content:"▾"; position:absolute; right:12px; top:50%; transform:translateY(-50%) rotate(-90deg); color:#8e8e93; transition:transform .2s ease; }
+    details.chapter-toggle[open]>summary::after,details.subsection-toggle[open]>summary::after{ transform:translateY(-50%) rotate(0deg); }
+    .chapter-content { padding:0 6px 18px; border-top:1px solid #ececf0; }
+    .subsection-body { padding:0 4px 12px; border-top:1px solid #efeff4; }
+    .ver-ok { color:#007a3d; font-size:12px; font-weight:600; }
+    .ver-up { color:#b25f00; font-size:12px; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>ny_2nd RAG 실험설계 종합 패치노트</h1>
+      <p class="muted">대상 레포: <code>kimdappi/skn25-fairdata-competition</code> · 기준 브랜치: <code>ny_2nd</code> · 기준 커밋: <code>203cd7b</code> · 최종 갱신: 2026-06-04</p>
+      <span class="chip">retrieval refactor</span>
+      <span class="chip">embedding ablation</span>
+      <span class="chip">reranker experiment</span>
+      <span class="chip">LLM evaluation</span>
+      <span class="chip">model recommendation</span>
+      <p style="margin-top:10px">ny_2nd 브랜치 (2026-06-04 14:00 KST, <code>interface &amp; backend 기반 모델 교체</code>) 의 실코드 구조를 기준으로, <strong>임베딩 · Reranker · LLM</strong> 각 축별 <strong>① 모델 비교표 (2026-06 최신성 통합) → ② 실험 체크리스트 → ③ 최소 실험 플랜 → ④ 코드 수정 가이드</strong> 순서로 정리합니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>1) 현재 코드 스냅샷 (ny_2nd, 203cd7b 구조)</h2>
+      <p>ny_2nd 브랜치의 <code>app/</code> 디렉토리 구조는 이미 <strong>interface-backend 분리 패턴</strong>이 도입되어 있습니다:</p>
+      <table>
+        <thead><tr><th>모듈</th><th>담당</th><th>현재 구현</th><th>한계</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/retrieval/interfaces.py</code></td><td>Protocol 정의</td><td>Dense/Sparse/MultiVector Backend Protocol</td><td>Protocol만 있음</td></tr>
+          <tr><td><code>app/retrieval/backends.py</code></td><td>Backend 구현 + Factory</td><td>BGE-M3 전용 (Dense/Sparse/MultiVector)</td><td>BGE-M3 외 모델 없음</td></tr>
+          <tr><td><code>app/retrieval/pipeline.py</code></td><td>검색 파이프라인</td><td>env로 경로 on/off, RRF fusion</td><td>backend 선택이 env 아닌 상수</td></tr>
+          <tr><td><code>app/retrieval/retriever.py</code></td><td>외부 API 래퍼</td><td>HybridRetriever → pipeline 위임</td><td>Config 주입 불가</td></tr>
+          <tr><td><code>app/rerank/interfaces.py</code></td><td>Reranker Protocol</td><td>RerankerBackend Protocol</td><td>Protocol만 있음</td></tr>
+          <tr><td><code>app/rerank/backends.py</code></td><td>Reranker Factory</td><td><code>build_reranker_backend</code> — bge_reranker만</td><td>1종만 지원</td></tr>
+          <tr><td><code>app/rerank/reranker.py</code></td><td>BGE Reranker 구현</td><td>BGERerankerV2M3 (cross-encoder)</td><td>단일 모델</td></tr>
+          <tr><td><code>app/generation/generator.py</code></td><td>LLM 생성</td><td>GroundedGenerator (Qwen 고정)</td><td>env로 model_dir만 변경, backend 추상화 없음</td></tr>
+          <tr><td><code>app/utils/config.py</code></td><td>설정 해석</td><td>모든 값이 하드코딩 상수</td><td><strong>env override 없음 — 핵심 수정 대상</strong></td></tr>
+          <tr><td><code>app/retrieval/router.py</code></td><td>질의 라우팅</td><td>규칙 기반 RouteDecision</td><td>키워드 사전 갱신 필요</td></tr>
+        </tbody>
+      </table>
+      <p class="warn">핵심 문제: <code>config.py</code>의 <code>DENSE_BACKEND = "bgem3"</code>, <code>RERANK_BACKEND = "bge_reranker"</code> 등이 상수라서 실험 변경 시 코드 수정이 필요합니다. Interface-Backend 패턴은 이미 도입되었으므로, factory에 새 backend를 등록하고 config를 env-driven으로 전환하면 모델 교체 실험이 가능해집니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>2) 리팩토링 목표</h2>
+      <table>
+        <thead><tr><th>목표</th><th>의미</th><th>효과</th></tr></thead>
+        <tbody>
+          <tr><td>env-driven config 전환</td><td><code>config.py</code>의 상수를 env + 기본값 패턴으로 변경</td><td>재배포 없이 실험 조건 변경 가능</td></tr>
+          <tr><td>Backend factory 확장</td><td>E5 / SBERT / Jina / GTE backend 구현 추가</td><td>다양한 임베딩 모델 비교 실험 가능</td></tr>
+          <tr><td>Reranker factory 확장</td><td>v2.5-gemma2 / jina-reranker-v3 등록</td><td>최신 reranker 모델 실험 가능</td></tr>
+          <tr><td>LLM backend 추상화</td><td>Qwen → generic factory 패턴 전환</td><td>EXAONE / Llama-3 등 비교 실험 가능</td></tr>
+          <tr><td>인덱스 네임스페이스 분리</td><td>backend별 인덱스 경로 분리</td><td>인덱스 오염/충돌 방지</td></tr>
+          <tr><td>평가 결과 스키마 확장</td><td>실험 설정을 결과 파일에 스냅샷 저장</td><td>재현성/회의 공유 강화</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ═══════════════ 3) 임베딩 ═══════════════ -->
+
+    <section class="card">
+      <h2>3) 임베딩</h2>
+
+      <h3>3-1) 모델 비교표</h3>
+      <p>HF 공개 지표·한국어 RAG 적용성·<strong>2026-06 최신 버전 점검</strong> 기준 통합 표. <span class="ver-ok">●</span> = 현시점 최신, <span class="ver-up">●</span> = 후속 버전 출시됨.</p>
+      <table>
+        <thead><tr><th>#</th><th>모델</th><th>HF</th><th>언어</th><th>장점</th><th>주의점</th><th>VRAM</th><th>속도</th><th>최신성 (2026-06)</th><th>추천 용도</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>BAAI/bge-m3</code></td><td><a href="https://huggingface.co/BAAI/bge-m3" target="_blank" rel="noopener">HF</a></td><td>다국어</td><td>Dense+Sparse+ColBERT 통합형</td><td>자원 사용량이 비교적 큼</td><td>~8–12GB</td><td>중간</td><td><span class="ver-ok">● 현시점 최신</span></td><td>하이브리드 검색 기준선</td></tr>
+          <tr><td>2</td><td><code>upskyy/bge-m3-korean</code></td><td><a href="https://huggingface.co/upskyy/bge-m3-korean" target="_blank" rel="noopener">HF</a></td><td>한국어 특화</td><td>BGE-M3 한국어 미세조정 계열</td><td>데이터셋별 성능 편차 가능</td><td>~8–12GB</td><td>중간</td><td><span class="ver-ok">● 현시점 최신</span></td><td>국문 문서 중심 고도화</td></tr>
+          <tr><td>3</td><td><code>intfloat/multilingual-e5-large</code></td><td><a href="https://huggingface.co/intfloat/multilingual-e5-large" target="_blank" rel="noopener">HF</a></td><td>다국어</td><td>안정적인 dense 성능, 레퍼런스 풍부</td><td>query/passage prefix 규칙 준수 필요</td><td>~2–4GB</td><td>빠름</td><td><span class="ver-ok">● 현시점 최신</span></td><td>Dense 백엔드 비교군</td></tr>
+          <tr><td>4</td><td><code>jhgan/ko-sbert-nli</code></td><td><a href="https://huggingface.co/jhgan/ko-sbert-nli" target="_blank" rel="noopener">HF</a></td><td>한국어</td><td>경량 운용 및 빠른 실험 적합</td><td>최신 대형 임베딩 대비 상한 존재</td><td>~1–2GB</td><td>매우 빠름</td><td><span class="ver-ok">● 현시점 최신</span></td><td>저비용 베이스라인</td></tr>
+          <tr><td>5</td><td><code>jinaai/jina-embeddings-v4</code></td><td><a href="https://huggingface.co/jinaai/jina-embeddings-v4" target="_blank" rel="noopener">HF</a></td><td>다국어/롱텍스트</td><td>v5-omni 라인업 직전 세대, 범용성 우수</td><td>Sparse/ColBERT는 별도 구성 필요</td><td>~2–5GB</td><td>빠름</td><td><span class="ver-up">● v5-omni 라인업 출시</span></td><td>Dense 대체군 1순위</td></tr>
+          <tr><td>6</td><td><code>Alibaba-NLP/gte-multilingual-base</code></td><td><a href="https://huggingface.co/Alibaba-NLP/gte-multilingual-base" target="_blank" rel="noopener">HF</a></td><td>다국어</td><td>성능-비용 균형이 좋은 편</td><td>최고점 성능보다 안정 운영형</td><td>~1.5–3GB</td><td>빠름</td><td><span class="ver-ok">● 현시점 최신</span></td><td>운영 비용 최적화군</td></tr>
+          <tr><td>7</td><td><code>nlpai-lab/KURE-v1</code></td><td><a href="https://huggingface.co/nlpai-lab/KURE-v1" target="_blank" rel="noopener">HF</a></td><td>한국어 특화</td><td>국문 도메인 적합성 비교에 유용</td><td>레퍼런스/생태계가 상대적으로 작음</td><td>~1.5–3GB</td><td>빠름</td><td><span class="ver-ok">● 현시점 최신</span></td><td>한국어 특화 비교 실험</td></tr>
+          <tr><td>8</td><td><code>dragonkue/snowflake-arctic-embed-l-v2.0-ko</code></td><td><a href="https://huggingface.co/dragonkue/snowflake-arctic-embed-l-v2.0-ko" target="_blank" rel="noopener">HF</a></td><td>한국어</td><td>국문 임베딩 후보군으로 탐색 가치</td><td>대규모 실전 사례 추가 검증 필요</td><td>~2–4GB</td><td>중간~빠름</td><td><span class="ver-ok">● 현시점 최신</span></td><td>도메인 적합성 탐색군</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">1차는 dense-only 비교(3~8 중심), 2차는 상위 모델만 하이브리드 확장(BGE-M3 계열 포함) 전략이 안정적입니다.</p>
+
+      <h3>3-2) 실험 체크리스트</h3>
+      <table>
+        <thead><tr><th>체크 항목</th><th>목표</th><th>완료 기준</th></tr></thead>
+        <tbody>
+          <tr><td>Backend 전환 검증</td><td>env 변경만으로 임베딩 모델 교체 확인</td><td>FAIRDATA_EMBED_BACKEND=e5 → Dense-only 정상 동작</td></tr>
+          <tr><td>하이브리드 ablation</td><td>Dense-only / Dense+Sparse / Full 비교</td><td>Recall@5, MRR, 지연시간 3축 기록</td></tr>
+          <tr><td>인덱스 격리 확인</td><td>namespace별 인덱스 충돌 없음</td><td>실험 A/B 동시 조회 결과 불일치 없음</td></tr>
+          <tr><td>모델별 Dense 성능</td><td>e5 / jina / gte / ko-sbert / KURE 순차 비교</td><td>Recall@5 기준 상위 2종 선정</td></tr>
+          <tr><td>최종 후보 하이브리드</td><td>상위 2종 + BGE-M3 계열 비교</td><td>최종 임베딩 1종 + 대체안 1종 확정</td></tr>
+          <tr><td>재현성 기록</td><td>실험 설정 스냅샷 저장</td><td>backend / flags / weights / 평가셋 버전 포함</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3-3) 최소 실험 플랜</h3>
+      <table>
+        <thead><tr><th>실험 ID</th><th>설정</th><th>목적</th></tr></thead>
+        <tbody>
+          <tr><td>E0</td><td>bgem3 + dense/sparse/multivector + reranker</td><td>기준선</td></tr>
+          <tr><td>E1</td><td>bgem3 + dense only + reranker</td><td>하이브리드 기여도 측정</td></tr>
+          <tr><td>E2</td><td>bgem3 + dense+sparse + reranker</td><td>multivector 기여도 분리</td></tr>
+          <tr><td>E3</td><td>e5(or jina/gte) + dense only + reranker</td><td>모델 교체 효과 검증</td></tr>
+          <tr><td>E4</td><td>상위 2개 모델 대상으로 라우팅 on/off 비교</td><td>라우팅 vs 모델 발전 축 비교</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3-4) 코드 수정 가이드</h3>
+      <p>ny_2nd의 <code>app/retrieval/</code>는 이미 <strong>Interface Protocol + Factory 패턴</strong>을 갖추고 있습니다. 아래는 기존 구조를 확장하여 다중 임베딩 백엔드를 지원하는 실전 가이드입니다.</p>
+
+      <h4>1. app/utils/config.py — 상수 → env 전환 (핵심)</h4>
+      <p>현재 모든 값이 하드코딩 상수입니다. os.getenv() 패턴으로 전환합니다:</p>
+      <pre><code>import os
+
+# 기존 상수 → env + 기본값 패턴
+DENSE_BACKEND = os.getenv("FAIRDATA_DENSE_BACKEND", "bgem3")
+SPARSE_BACKEND = os.getenv("FAIRDATA_SPARSE_BACKEND", "bgem3")
+MULTIVECTOR_BACKEND = os.getenv("FAIRDATA_MULTIVECTOR_BACKEND", "bgem3")
+
+def is_dense_enabled() -> bool:
+    return os.getenv("FAIRDATA_ENABLE_DENSE", "1") == "1"
+
+def is_sparse_enabled() -> bool:
+    return os.getenv("FAIRDATA_ENABLE_SPARSE", "1") == "1"
+
+def is_multivector_enabled() -> bool:
+    return os.getenv("FAIRDATA_ENABLE_MULTIVECTOR", "1") == "1"
+
+# 인덱스 namespace (실험별 격리)
+def resolve_index_namespace() -> str:
+    return os.getenv("FAIRDATA_INDEX_NAMESPACE", f"{DENSE_BACKEND}_default")</code></pre>
+
+      <h4>2. app/retrieval/backends.py — Backend 확장</h4>
+      <p>현재 BGE-M3 전용 factory에 E5/SBERT/Jina/GTE backend를 추가합니다. 이미 <code>DenseRetrievalBackend</code> Protocol이 정의되어 있으므로, 이를 구현하는 class만 추가하면 pipeline의 나머지 코드는 변경할 필요가 없습니다.</p>
+      <pre><code>from sentence_transformers import SentenceTransformer
+
+class STModelRuntime:
+    """SentenceTransformer 기반 공통 런타임 (E5/SBERT/Jina/GTE 용)"""
+    def __init__(self, model_dir: Path):
+        self.model = SentenceTransformer(str(model_dir), device="cuda")
+        self.model_dir = model_dir
+
+class STDenseBackend(DenseRetrievalBackend):
+    """E5/Jina/GTE/Ko-SBERT 등 Dense 전용 backend"""
+    def __init__(self, runtime: STModelRuntime):
+        self.runtime = runtime
+        self.model_dir = runtime.model_dir
+    def encode_documents(self, texts):
+        return self.runtime.model.encode(texts, normalize_embeddings=True)
+    def encode_query(self, question):
+        return self.runtime.model.encode([question], normalize_embeddings=True)[0].tolist()
+
+# Factory 확장
+def build_dense_backend(backend_name, model_dir, runtime_cache):
+    if backend_name == "bgem3":
+        return BGEM3DenseBackend(_get_bgem3_runtime(runtime_cache, model_dir))
+    if backend_name in ("e5", "sbert", "jina_v3", "gte_multilingual"):
+        cache_key = ("st", model_dir.resolve())
+        if cache_key not in runtime_cache:
+            runtime_cache[cache_key] = STModelRuntime(model_dir)
+        return STDenseBackend(runtime_cache[cache_key])
+    raise ValueError(f"Unsupported: {backend_name}")</code></pre>
+      <p class="ok">pipeline.py 의 기존 코드는 <code>build_dense_backend()</code>를 호출하기만 하므로, 여기에만 새 backend를 등록하면 자동으로 동작합니다.</p>
+
+      <h4>3. scripts/evaluate_local.py — 실험 결과 스키마</h4>
+      <pre><code>{
+  "experiment_tag": "E3_e5_dense",
+  "embed_backend": "e5",
+  "enable_dense": true, "enable_sparse": false, "enable_multivector": false,
+  "index_namespace": "e5_dense",
+  "metrics": {"recall_at_5": 0.0, "mrr": 0.0, "token_f1": 0.0}
+}</code></pre>
+
+      <h4>수정 파일 요약</h4>
+      <table>
+        <thead><tr><th>파일</th><th>변경</th><th>난이도</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/utils/config.py</code></td><td>상수 → os.getenv() 전환, 인덱스 namespace 추가</td><td>낮음</td></tr>
+          <tr><td><code>app/retrieval/backends.py</code></td><td>STModelRuntime + STDenseBackend 추가, factory 확장</td><td>중간</td></tr>
+          <tr><td><code>scripts/evaluate_local.py</code></td><td>결과 JSON에 실험 메타 추가</td><td>낮음</td></tr>
+        </tbody>
+      </table>
+      <p class="warn">주의: /predict API I/O는 변경하지 않고, 내부 주입/설정만 변경해야 제출 안정성을 유지합니다.</p>
+    </section>
+
+    <!-- ═══════════════ 4) Reranker ═══════════════ -->
+
+    <section class="card">
+      <h2>4) Reranker</h2>
+
+      <h3>4-1) 모델 비교표</h3>
+      <p>2026-06 최신 버전 점검 포함. <span class="ver-ok">●</span> = 현시점 최신, <span class="ver-up">●</span> = 후속 버전 출시됨.</p>
+      <table>
+        <thead><tr><th>모델</th><th>HF</th><th>GitHub</th><th>장점</th><th>주의점</th><th>최신성</th><th>추천</th></tr></thead>
+        <tbody>
+          <tr><td><code>BAAI/bge-reranker-v2-m3</code></td><td><a href="https://huggingface.co/BAAI/bge-reranker-v2-m3" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/FlagOpen/FlagEmbedding" target="_blank" rel="noopener">FlagEmbedding</a></td><td>현재 ny_2nd 기본 구현과 호환</td><td>추론 비용이 가벼운 편은 아님</td><td><span class="ver-up">● v2.5-gemma2-lightweight 출시</span></td><td>기본 기준선</td></tr>
+          <tr><td><code>BAAI/bge-reranker-v2-gemma</code></td><td><a href="https://huggingface.co/BAAI/bge-reranker-v2-gemma" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/FlagOpen/FlagEmbedding" target="_blank" rel="noopener">FlagEmbedding</a></td><td>v2 계열 고성능 후보</td><td>VRAM/지연시간 증가 가능성</td><td><span class="ver-up">● v2.5-gemma2-lightweight 출시</span></td><td>정확도 우선</td></tr>
+          <tr><td><code>BAAI/bge-reranker-v2.5-gemma2-lightweight</code></td><td><a href="https://huggingface.co/BAAI/bge-reranker-v2.5-gemma2-lightweight" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/FlagOpen/FlagEmbedding" target="_blank" rel="noopener">FlagEmbedding</a></td><td>v2.5 경량화, 속도-성능 균형</td><td>공개 초기, 실전 검증 축적 중</td><td><span class="ver-ok">● 최신</span></td><td>속도-성능 1순위</td></tr>
+          <tr><td><code>cross-encoder/ms-marco-MiniLM-L-6-v2</code></td><td><a href="https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/microsoft/MSMARCO-Passage-Ranking" target="_blank" rel="noopener">MSMARCO</a></td><td>가볍고 빠름 (저지연)</td><td>국문 도메인 적합성 추가 검증 필요</td><td><span class="ver-ok">● 현시점 최신</span></td><td>실시간 응답 최적화</td></tr>
+          <tr><td><code>cross-encoder/ms-marco-MiniLM-L-12-v2</code></td><td><a href="https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-12-v2" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/microsoft/MSMARCO-Passage-Ranking" target="_blank" rel="noopener">MSMARCO</a></td><td>L6 대비 재정렬 품질 개선</td><td>L6 대비 느림</td><td><span class="ver-ok">● 현시점 최신</span></td><td>속도-성능 비교군</td></tr>
+          <tr><td><code>jinaai/jina-reranker-v3</code></td><td><a href="https://huggingface.co/jinaai/jina-reranker-v3" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/jina-ai/late-chunking" target="_blank" rel="noopener">Jina GitHub</a></td><td>다국어 재정렬 성능 우수, v3 업그레이드</td><td>토크나이저 검증 필요</td><td><span class="ver-ok">● 최신</span></td><td>비-BGE 비교군</td></tr>
+          <tr><td><code>Dongjin-kr/ko-reranker</code></td><td><a href="https://huggingface.co/Dongjin-kr/ko-reranker" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/aws-samples/aws-ai-ml-workshop-kr/tree/master/genai/aws-gen-ai-kr/30_fine_tune/00-reranker-kr" target="_blank" rel="noopener">GitHub</a></td><td>한국어 특화</td><td>레퍼런스/운영 사례 제한</td><td><span class="ver-ok">● 현시점 최신</span></td><td>국문 특화 실험</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4-2) 실험 체크리스트</h3>
+      <table>
+        <thead><tr><th>체크 항목</th><th>목표</th><th>완료 기준</th></tr></thead>
+        <tbody>
+          <tr><td>Baseline 확보</td><td>reranker off vs v2-m3 비교</td><td>Recall@5, MRR, final_score 기록</td></tr>
+          <tr><td>top_n 탐색</td><td>20/50/100 지연-성능 비교</td><td>최적 top_n 1개 선정</td></tr>
+          <tr><td>가중치 탐색</td><td>fusion weight 0.7/1.0/1.3 비교</td><td>과/과소 반영 없는 구간 확정</td></tr>
+          <tr><td>v2.5-gemma2-lightweight 검증</td><td>v2-m3 vs 최신 경량 모델</td><td>속도 ↑ + 성능 유지 확인</td></tr>
+          <tr><td>jina-reranker-v3 검증</td><td>비-BGE 계열 성능 확인</td><td>BGE 대비 Recall@5 차이 측정</td></tr>
+          <tr><td>실패 케이스 분석</td><td>오답 원인 분류</td><td>fusion/entity/rerank 원인 태깅</td></tr>
+          <tr><td>재현성 기록</td><td>실험 설정 스냅샷 저장</td><td>모델명/top_n/가중치/평가셋 기록</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4-3) 최소 실험 플랜</h3>
+      <table>
+        <thead><tr><th>ID</th><th>설정</th><th>목적</th></tr></thead>
+        <tbody>
+          <tr><td>R0</td><td>reranker=off (dense only baseline)</td><td>재정렬 off 상태 Recall@5 확보</td></tr>
+          <tr><td>R1</td><td>reranker=v2-m3, top_n=50, weight=1.0</td><td>현재 기준선 재측정</td></tr>
+          <tr><td>R2</td><td>reranker=v2.5-gemma2-lightweight, top_n=50, weight=1.0</td><td>최신 경량 모델 확인</td></tr>
+          <tr><td>R3</td><td>reranker=jina-reranker-v3, top_n=50, weight=1.0</td><td>비-BGE 최신 모델 비교</td></tr>
+          <tr><td>R4</td><td>상위 2개 모델 대상 top_n (20/50/100) 탐색</td><td>지연-성능 최적점 도출</td></tr>
+          <tr><td>R5</td><td>상위 2개 모델 대상 weight (0.7/1.0/1.3) 탐색</td><td>가중치 최적화</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4-4) 코드 수정 가이드</h3>
+      <p>ny_2nd는 <code>app/rerank/</code>에 <strong>RerankerBackend Protocol</strong> + <strong>Factory</strong> 패턴이 이미 도입되어 있습니다. 현재는 <code>bge_reranker</code> 하나만 등록되어 있습니다.</p>
+
+      <h4>1. app/utils/config.py — env 전환</h4>
+      <pre><code>RERANK_BACKEND = os.getenv("FAIRDATA_RERANK_BACKEND", "bge_reranker")
+RERANK_TOP_N = int(os.getenv("FAIRDATA_RERANK_TOP_N", "50"))
+RERANK_WEIGHT = float(os.getenv("FAIRDATA_RERANK_WEIGHT", "1.0"))</code></pre>
+
+      <h4>2. app/rerank/backends.py — Factory 확장</h4>
+      <p>현재 <code>build_reranker_backend</code>는 <code>bge_reranker</code>만 지원합니다. 새 backend를 추가합니다:</p>
+      <pre><code>def build_reranker_backend(backend_name, corpus_store, model_dir) -> RerankerBackend:
+    if backend_name == "bge_reranker":
+        return BGERerankerV2M3(corpus_store, model_dir)
+    if backend_name == "bge_reranker_v2.5_gemma2":
+        # 동일 BGERerankerV2M3 클래스 사용, 모델 dir만 다름
+        return BGERerankerV2M3(corpus_store, model_dir)
+    if backend_name == "jina_reranker_v3":
+        return JinaRerankerV3(corpus_store, model_dir)
+    if backend_name == "minilm_l6":
+        return MiniLMReranker(corpus_store, model_dir)
+    raise ValueError(f"Unsupported: {backend_name}")</code></pre>
+      <p class="ok"><code>RerankerBackend</code> Protocol을 구현하는 class만 추가하면 pipeline의 나머지 코드는 그대로 동작합니다.</p>
+
+      <h4>3. app/rerank/reranker.py — JinaRerankerV3 클래스 추가</h4>
+      <pre><code>class JinaRerankerV3:
+    """jina-reranker-v3 cross-encoder wrapper"""
+    def __init__(self, corpus_store, model_dir):
+        self.corpus_store = corpus_store
+        self.model_dir = Path(model_dir)
+        # BGERerankerV2M3와 동일 패턴의 ensure_runtime / score_pairs / rerank_chunks 구현
+        ...</code></pre>
+
+      <h4>수정 파일 요약</h4>
+      <table>
+        <thead><tr><th>파일</th><th>변경</th><th>난이도</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/utils/config.py</code></td><td>RERANK_BACKEND env 전환 + TOP_N/WEIGHT 추가</td><td>낮음</td></tr>
+          <tr><td><code>app/rerank/backends.py</code></td><td>Factory에 새 backend 등록</td><td>낮음</td></tr>
+          <tr><td><code>app/rerank/reranker.py</code></td><td>JinaRerankerV3 / MiniLMReranker 클래스 추가</td><td>중간</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ═══════════════ 5) LLM ═══════════════ -->
+
+    <section class="card">
+      <h2>5) LLM</h2>
+
+      <h3>5-1) 모델 비교표</h3>
+      <p>한국어 우수 LLM 후보 (2026-06, ≤8B). <span class="ver-ok">●</span> = 현시점 최신, <span class="ver-up">●</span> = 후속 버전 출시. 선정 기준: 공개 instruct 계열 + 한국어 품질 + 8B 이하.</p>
+      <table>
+        <thead><tr><th>모델</th><th>HF</th><th>GitHub</th><th>장점</th><th>주의점</th><th>최신성</th><th>추천</th></tr></thead>
+        <tbody>
+          <tr><td><code>Qwen/Qwen2.5-7B-Instruct</code></td><td><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/QwenLM/Qwen2.5" target="_blank" rel="noopener">GitHub</a></td><td>다국어 지시이행 안정적, 레퍼런스 풍부</td><td>장문 추론 보수적</td><td><span class="ver-up">● Qwen3 출시</span></td><td>기준선</td></tr>
+          <tr><td><code>Qwen/Qwen3-8B</code></td><td><a href="https://huggingface.co/Qwen/Qwen3-8B" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/QwenLM/Qwen3" target="_blank" rel="noopener">GitHub</a></td><td>8B급 추론·지시이행 성능 우수</td><td>프롬프트 포맷 민감</td><td><span class="ver-ok">● 최신</span></td><td>성능 상한 1순위</td></tr>
+          <tr><td><code>Qwen/Qwen3-4B</code></td><td><a href="https://huggingface.co/Qwen/Qwen3-4B" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/QwenLM/Qwen3" target="_blank" rel="noopener">GitHub</a></td><td>4B 경량 대비 성능/효율 균형, 2507 확인</td><td>8B 대비 장문 한계</td><td><span class="ver-ok">● 최신 (2507)</span></td><td>저비용 고성능</td></tr>
+          <tr><td><code>LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct</code></td><td><a href="https://huggingface.co/LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/LG-AI-EXAONE/EXAONE-3.5" target="_blank" rel="noopener">GitHub</a></td><td>한국어 문맥 품질·문체 자연스러움</td><td>토크나이저/템플릿 검증 필요</td><td><span class="ver-ok">● 현시점 최신</span></td><td>한국어 품질 우선</td></tr>
+          <tr><td><code>beomi/Llama-3-Open-Ko-8B</code></td><td><a href="https://huggingface.co/beomi/Llama-3-Open-Ko-8B" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/meta-llama/llama-recipes" target="_blank" rel="noopener">GitHub</a></td><td>한국어 튜닝 기반 국내 도메인 적합</td><td>벤치마크/운영 레퍼런스 추가 점검 필요</td><td><span class="ver-ok">● 현시점 최신</span></td><td>국문 특화 후보</td></tr>
+          <tr><td><code>NCSOFT/Llama-VARCO-8B-Instruct</code></td><td><a href="https://huggingface.co/NCSOFT/Llama-VARCO-8B-Instruct" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/instructkr/LogicKor" target="_blank" rel="noopener">GitHub</a></td><td>한국어 대화·지시 수행 비교군</td><td>실전 적용 사례 제한</td><td><span class="ver-ok">● 현시점 최신</span></td><td>국내 생태계 비교</td></tr>
+          <tr><td><code>microsoft/Phi-3.5-mini-instruct</code></td><td><a href="https://huggingface.co/microsoft/Phi-3.5-mini-instruct" target="_blank" rel="noopener">HF</a></td><td><a href="https://github.com/microsoft/Phi-3CookBook" target="_blank" rel="noopener">GitHub</a></td><td>소형 모델 대비 추론 효율/속도</td><td>한국어 장문 7~8B 대비 열세</td><td><span class="ver-ok">● 현시점 최신</span></td><td>저지연·저비용</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5-2) 실험 체크리스트</h3>
+      <table>
+        <thead><tr><th>체크 항목</th><th>목표</th><th>완료 기준</th></tr></thead>
+        <tbody>
+          <tr><td>모델 로딩 검증</td><td>FAIRDATA_LLM_MODEL_DIR 대체 경로 주입</td><td>/predict 정상 응답 + OOM 없음</td></tr>
+          <tr><td>Baseline 비교</td><td>Qwen2.5-7B vs Qwen3-8B vs EXAONE-3.5-7.8B</td><td>동일 평가셋 final_score 비교표 확보</td></tr>
+          <tr><td>생성 길이 튜닝</td><td>max_new_tokens 128/256/384 비교</td><td>성능-지연시간 균형값 1개 확정</td></tr>
+          <tr><td>근거 입력량 튜닝</td><td>evidence 개수·input_chars 조정</td><td>hallucination 감소 + 답변 누락 최소화</td></tr>
+          <tr><td>프롬프트 정책 비교</td><td>strict-grounded vs concise-grounded</td><td>정확도·가독성 trade-off 파악</td></tr>
+          <tr><td>오답 분석</td><td>근거 누락/오인용/과잉추론 분류</td><td>상위 실패 20건 원인 태깅 완료</td></tr>
+          <tr><td>재현성 기록</td><td>모델/프롬프트/토큰 설정 저장</td><td>실험 로그에 설정 스냅샷 포함</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5-3) 최소 실험 플랜</h3>
+      <table>
+        <thead><tr><th>ID</th><th>설정</th><th>목적</th></tr></thead>
+        <tbody>
+          <tr><td>L0</td><td>Qwen2.5-7B + 기본 프롬프트 + max_new_tokens=256</td><td>현재 생성 기준선 확정</td></tr>
+          <tr><td>L1</td><td>Qwen3-8B 동일 조건 비교</td><td>8B 상한 성능 확인</td></tr>
+          <tr><td>L2</td><td>Qwen3-4B 동일 조건 비교</td><td>저비용 대비 성능 확인</td></tr>
+          <tr><td>L3</td><td>EXAONE-3.5-7.8B 동일 조건 비교</td><td>한국어 품질 우위 검증</td></tr>
+          <tr><td>L4</td><td>상위 2개 모델 대상 128/256/384 토큰 튜닝</td><td>지연-품질 최적점 탐색</td></tr>
+          <tr><td>L5</td><td>상위 2개 모델 대상 evidence 3/5 + chars 4k/6k/8k</td><td>근거충실도 최적화</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5-4) 코드 수정 가이드</h3>
+      <p>ny_2nd의 <code>app/generation/generator.py</code>는 현재 Qwen 모델로 고정되어 있습니다. LLM backend를 추상화하여 다중 모델을 지원합니다.</p>
+
+      <h4>1. app/generation/generator.py — LLM Backend 추상화</h4>
+      <pre><code>import os
+from app.utils.config import resolve_llm_model_dir
+
+class LLMBackend(Protocol):
+    """LLM Backend Protocol"""
+    model_dir: Path
+    def generate(self, question: str, chunks: list[Chunk]) -> str: ...
+
+class QwenBackend(LLMBackend):
+    """기존 GroundedGenerator를 backend로 래핑"""
+    def __init__(self, model_dir: Path):
+        self.model_dir = model_dir
+        self._inner = GroundedGenerator(model_dir)
+
+class ExaoneBackend(LLMBackend):
+    """EXAONE-3.5-7.8B backend"""
+    def __init__(self, model_dir: Path):
+        self.model_dir = Path(model_dir)
+        # transformers AutoModelForCausalLM + EXAONE chat template
+        ...
+
+def build_llm_backend() -> LLMBackend:
+    backend = os.getenv("FAIRDATA_LLM_BACKEND", "qwen")
+    model_dir = resolve_llm_model_dir()
+    if backend == "qwen": return QwenBackend(model_dir)
+    if backend == "exaone": return ExaoneBackend(model_dir)
+    raise ValueError(f"Unsupported LLM backend: {backend}")</code></pre>
+
+      <h4>2. app/utils/config.py — LLM env 추가</h4>
+      <pre><code>LLM_BACKEND = os.getenv("FAIRDATA_LLM_BACKEND", "qwen")
+
+def resolve_llm_model_dir() -> Path:
+    custom = os.getenv("FAIRDATA_LLM_MODEL_DIR")
+    if custom: return Path(custom)
+    return resolve_qwen_model_dir()  # 기본값</code></pre>
+
+      <h4>수정 파일 요약</h4>
+      <table>
+        <thead><tr><th>파일</th><th>변경</th><th>난이도</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/utils/config.py</code></td><td>FAIRDATA_LLM_BACKEND, FAIRDATA_LLM_MODEL_DIR env 추가</td><td>낮음</td></tr>
+          <tr><td><code>app/generation/generator.py</code></td><td>LLMBackend Protocol + Factory 도입, Qwen/EXAONE backend 분리</td><td>중간</td></tr>
+          <tr><td><code>server.py</code></td><td>build_llm_backend() 호출로 변경</td><td>낮음</td></tr>
+        </tbody>
+      </table>
+      <p class="warn"><strong>server.py 수정 상세:</strong> 현재 ny_2nd server.py 21행은 <code>generator = GroundedGenerator()</code> 로 Qwen을 하드코딩 생성합니다. 이 구조에서는 <code>FAIRDATA_LLM_BACKEND</code> env를 변경해도 다른 LLM으로 교체할 수 없습니다. 따라서 아래와 같이 env 기반 팩토리로 교체해야 실험 조건 변경이 가능합니다.</p>
+      <pre><code># server.py — 변경 전 (현재 ny_2nd)
+generator = GroundedGenerator()  # Qwen 고정
+
+# server.py — 변경 후
+from app.generation.generator import build_llm_backend
+generator = build_llm_backend()  # FAIRDATA_LLM_BACKEND env로 제어
+
+# 실험 예시
+# FAIRDATA_LLM_BACKEND=qwen   → QwenBackend (기존 동작 유지)
+# FAIRDATA_LLM_BACKEND=exaone → ExaoneBackend (EXAONE-3.5-7.8B)
+# FAIRDATA_LLM_MODEL_DIR=/app/models/exaone-3.5-7.8b</code></pre>
+    </section>
+
+    <!-- ═══════════════ 6) Ver2 Retrieval Matrix ═══════════════ -->
+
+    <section class="card">
+      <h2>6) Ver2 - Retrieval 방식별 적용 범위와 실험 후보군</h2>
+
+      <h3>6-1) Dense / Sparse / Multi-Vector 구분 원칙</h3>
+      <p>ver2에서는 "임베딩 모델을 바꾼다"는 말을 검색 방식별로 분해해서 봐야 합니다. 현재 ny_2nd 코드 기준으로는 <strong>Dense Search</strong>, <strong>Sparse Search</strong>, <strong>Multi-Vector Search</strong>가 요구하는 모델 조건이 서로 다릅니다.</p>
+      <table>
+        <thead><tr><th>검색 방식</th><th>일반 임베딩 모델 사용 가능 여부</th><th>대표 예시</th><th>현재 ny_2nd 코드 기준 해석</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Dense Search</strong></td><td>가능</td><td><code>OpenAI embedding</code>, <code>bge-small</code>, <code>bge-base</code>, <code>e5</code>, <code>gte</code>, <code>jina</code>, <code>ko-sbert</code></td><td>일반 임베딩 벡터만 만들 수 있으면 대부분 붙일 수 있음</td></tr>
+          <tr><td><strong>Sparse Search</strong></td><td>조건부 가능</td><td><code>BM25</code>, <code>SPLADE</code>, <code>BGE-M3 sparse</code></td><td>BM25는 모델 없이 가능하지만, learned sparse는 전용 모델/출력이 필요함</td></tr>
+          <tr><td><strong>Multi-Vector Search</strong></td><td>일반적으로 어려움</td><td><code>ColBERT</code>, <code>BGE-M3 multi-vector</code></td><td>문서당 여러 벡터를 내는 전용 출력 구조가 필요함</td></tr>
+        </tbody>
+      </table>
+      <p class="warn">즉 <code>dense-only 모델 = retrieval 전체 대체</code>가 아닙니다. 대부분의 일반 임베딩 모델은 dense 경로만 직접 대체할 수 있고, sparse와 multi-vector는 별도 전략이 필요합니다.</p>
+
+      <h3>6-2) 현재 코드 기준으로 왜 모든 조합을 바로 못 돌리는가</h3>
+      <ul>
+        <li><strong>Dense Search</strong>는 현재 구조에서도 비교적 쉽게 교체 가능합니다. <code>SentenceTransformer</code> 계열 또는 유사 인터페이스만 맞추면 됩니다.</li>
+        <li><strong>Sparse Search</strong>는 현재 코드에서 사실상 <code>BGEM3HybridModel</code> 구현에 묶여 있습니다. 따라서 <code>e5 + sparse</code>, <code>gte + sparse</code> 같은 조합은 현재 구조상 성립하지 않습니다.</li>
+        <li><strong>Multi-Vector Search</strong>도 현재 구현은 <code>BGE-M3</code> 계열 전용입니다. 일반 dense 모델은 문서당 단일 벡터만 내므로 바로 대체할 수 없습니다.</li>
+        <li>따라서 "모든 모델을 동일한 hybrid 설정으로 공정 비교"는 현재 코드 기준으로 불가능하고, <strong>dense-only 비교군</strong>과 <strong>full-hybrid 비교군</strong>을 분리해야 합니다.</li>
+      </ul>
+
+      <h3>6-3) 검색 방식별 실험 후보군 리스트</h3>
+      <table>
+        <thead><tr><th>실험군</th><th>후보</th><th>설명</th><th>현재 코드 적합성</th></tr></thead>
+        <tbody>
+          <tr><td>Dense-only 후보군 A</td><td><code>intfloat/multilingual-e5-large</code>, <code>jinaai/jina-embeddings-v4</code>, <code>Alibaba-NLP/gte-multilingual-base</code>, <code>jhgan/ko-sbert-nli</code>, <code>nlpai-lab/KURE-v1</code>, <code>dragonkue/snowflake-arctic-embed-l-v2.0-ko</code></td><td>일반 임베딩 모델 비교군</td><td><span class="ok">높음</span></td></tr>
+          <tr><td>Dense-only 후보군 B</td><td><code>BAAI/bge-small-en-v1.5</code>, <code>BAAI/bge-base-en-v1.5</code>, <code>BAAI/bge-small-zh-v1.5</code>, <code>OpenAI text-embedding-3-small</code>, <code>OpenAI text-embedding-3-large</code></td><td>범용 dense 실험 후보. 다만 한국어 법률 도메인 적합성은 별도 검증 필요</td><td><span class="warn">중간</span></td></tr>
+          <tr><td>Sparse 후보군 1</td><td><code>BM25</code></td><td>학습형 sparse가 아니라 lexical baseline. 모델 없이 추가 가능</td><td><span class="ok">가장 현실적</span></td></tr>
+          <tr><td>Sparse 후보군 2</td><td><code>BGE-M3 sparse</code>, <code>upskyy/bge-m3-korean sparse</code></td><td>전용 sparse head가 있는 learned sparse</td><td><span class="ok">기존 구조 활용 가능</span></td></tr>
+          <tr><td>Sparse 후보군 3</td><td><code>SPLADE</code></td><td>learned sparse 대표 계열</td><td><span class="warn">신규 구현 필요</span></td></tr>
+          <tr><td>Multi-Vector 후보군 1</td><td><code>BGE-M3 multi-vector</code>, <code>upskyy/bge-m3-korean multi-vector</code></td><td>기존 ny_2nd 구조와 가장 가까운 전용 출력 계열</td><td><span class="ok">기존 구조 활용 가능</span></td></tr>
+          <tr><td>Multi-Vector 후보군 2</td><td><code>ColBERT</code> 계열</td><td>대표적인 multi-vector retrieval 구조</td><td><span class="warn">신규 인덱스/스코어링 구현 필요</span></td></tr>
+        </tbody>
+      </table>
+      <p class="muted">OpenAI embedding, bge-small, bge-base 같은 모델은 dense-only 실험 후보로는 의미가 있지만, sparse/multi-vector까지 포함한 full-hybrid 후보로 바로 올릴 수는 없습니다.</p>
+
+      <h3>6-4) 지금 코드에서 바로 잘 돌릴 수 있는 실험 조합</h3>
+      <table>
+        <thead><tr><th>ID</th><th>조합</th><th>의미</th><th>권장 여부</th></tr></thead>
+        <tbody>
+          <tr><td>V2-E0</td><td><code>bgem3 + dense+sparse+multivector + reranker</code></td><td>현재 full-hybrid 기준선</td><td><span class="ok">필수</span></td></tr>
+          <tr><td>V2-E1</td><td><code>bgem3 + dense only + reranker</code></td><td>BGE-M3 내부에서 hybrid 기여도 분리</td><td><span class="ok">필수</span></td></tr>
+          <tr><td>V2-E2</td><td><code>e5 + dense only + reranker</code></td><td>일반 dense strong baseline</td><td><span class="ok">권장</span></td></tr>
+          <tr><td>V2-E3</td><td><code>jina 또는 gte + dense only + reranker</code></td><td>dense 대체군 비교</td><td><span class="ok">권장</span></td></tr>
+          <tr><td>V2-E4</td><td><code>dense model + BM25 + reranker</code></td><td>일반 dense 모델을 하이브리드 후보로 올리는 현실적 구조. 현재 코드의 retrieval profile 이름은 <code>dense_lexical_hybrid</code></td><td><span class="ok">강력 권장</span></td></tr>
+          <tr><td>V2-E5</td><td><code>upskyy/bge-m3-korean + dense only</code></td><td>국문 특화 BGE 파생 비교</td><td><span class="warn">헤드 호환성 확인 후</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3>6-5) 코드 기준 리팩토링 방향 - "Dense-only 후보"와 "Hybrid 후보"를 분리</h3>
+      <p>현재 코드를 기준으로 가장 안전한 방향은 <strong>retrieval path capability</strong>를 먼저 코드에 명시하는 것입니다. 즉 "이 backend는 dense만 가능한지", "sparse까지 가능한지", "multi-vector까지 가능한지"를 설정 레벨에서 구분해야 합니다.</p>
+      <table>
+        <thead><tr><th>리팩토링 항목</th><th>내용</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>Backend capability 표 도입</td><td>각 retrieval backend에 <code>supports_dense</code>, <code>supports_sparse</code>, <code>supports_multivector</code> 정의</td><td>불가능한 조합을 조기 차단하기 위해</td></tr>
+          <tr><td>BM25 backend 추가</td><td>모델 없는 sparse backend로 <code>BM25SparseBackend</code> 추가</td><td>dense-only 모델도 hybrid 실험 가능하게 만들기 위해</td></tr>
+          <tr><td>Validation 함수 추가</td><td>dense-only backend인데 sparse/multivector on이면 서버 시작 전에 실패</td><td>중간 런타임 실패 방지</td></tr>
+          <tr><td>Index namespace 세분화</td><td><code>dense/sparse/multivector</code> 구성까지 namespace에 반영</td><td>인덱스 오염 방지</td></tr>
+          <tr><td>Experiment profile 분리</td><td><code>dense-only</code>, <code>dense+bm25</code>, <code>full-hybrid</code>를 명시적인 실험 타입으로 저장</td><td>결과 해석을 쉽게 하기 위해</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6-6) 현재 코드 기준 상세 리팩토링 계획</h3>
+      <h4>1. app/utils/config.py - capability aware config</h4>
+      <ul>
+        <li><code>resolve_dense_backend_name()</code>, <code>resolve_sparse_backend_name()</code>, <code>resolve_multivector_backend_name()</code>는 유지합니다.</li>
+        <li>대신 backend별 capability 맵을 추가합니다.</li>
+        <li>예: <code>bgem3</code>는 dense/sparse/multivector 모두 가능, <code>e5</code>는 dense만 가능, <code>bm25</code>는 sparse만 가능으로 정의합니다.</li>
+        <li><code>validate_retrieval_configuration()</code>를 추가해 서버 시작 전에 조합을 검사합니다.</li>
+      </ul>
+      <pre><code>RETRIEVAL_BACKEND_CAPABILITIES = {
+    "bgem3": {"dense": True, "sparse": True, "multivector": True},
+    "upskyy_bgem3_ko": {"dense": True, "sparse": True, "multivector": True},
+    "e5": {"dense": True, "sparse": False, "multivector": False},
+    "jina_v4": {"dense": True, "sparse": False, "multivector": False},
+    "gte_multilingual": {"dense": True, "sparse": False, "multivector": False},
+    "sbert": {"dense": True, "sparse": False, "multivector": False},
+    "kure_v1": {"dense": True, "sparse": False, "multivector": False},
+    "snowflake_ko": {"dense": True, "sparse": False, "multivector": False},
+    "bm25": {"dense": False, "sparse": True, "multivector": False},
+}</code></pre>
+
+      <h4>2. app/retrieval/backends.py - BM25 sparse backend 추가</h4>
+      <ul>
+        <li>현재 sparse backend는 BGE-M3 전용입니다.</li>
+        <li><code>BM25SparseBackend</code>를 추가하면 <code>e5 + BM25</code>, <code>jina + BM25</code>, <code>gte + BM25</code> 같은 dense+lexical hybrid 실험이 가능합니다.</li>
+        <li>가장 단순한 방식은 <code>rank_bm25</code> 또는 유사 라이브러리 기반으로 문서 토큰 인덱스를 유지하는 것입니다.</li>
+      </ul>
+      <pre><code>def build_sparse_backend(backend_name, model_dir, runtime_cache):
+    alias = _resolve_dense_alias(backend_name)
+    if alias in {"bgem3", "bge_m3", "upskyy_bgem3_ko"}:
+        return BGEM3SparseBackend(_get_bgem3_runtime(runtime_cache, model_dir))
+    if alias == "bm25":
+        return BM25SparseBackend(_get_bm25_runtime(runtime_cache))
+    raise ValueError(f"Unsupported sparse backend: {backend_name}")</code></pre>
+
+      <h4>3. app/retrieval/pipeline.py - path validation + trace 명확화</h4>
+      <ul>
+        <li>초기화 시점에 capability 검사를 수행합니다.</li>
+        <li><code>trace_source</code>에 <code>dense+bge_sparse+multivector</code>, <code>dense+bm25</code> 같은 조합명을 남깁니다.</li>
+        <li>실험 결과를 볼 때 retrieval 구조 차이와 모델 차이를 분리해서 해석할 수 있게 합니다.</li>
+      </ul>
+
+      <h4>4. scripts/evaluate_local.py / app/evaluation/metrics.py - 실험 타입 저장</h4>
+      <ul>
+        <li><code>retrieval_profile</code> 필드를 추가합니다.</li>
+        <li>예: <code>dense_only</code>, <code>dense_bm25</code>, <code>full_hybrid</code></li>
+        <li><code>sparse_backend</code>, <code>multivector_backend</code>, <code>index_namespace</code>를 항상 저장합니다.</li>
+      </ul>
+
+      <h4>5. server.py - 서버 시작 전 validation 실행</h4>
+      <ul>
+        <li>현재는 잘못된 조합이 검색 단계에서 늦게 실패할 수 있습니다.</li>
+        <li>서버 import 시점 또는 app 초기화 시점에 validation을 실행해 조기 실패시키는 편이 안전합니다.</li>
+      </ul>
+
+      <h3>6-7) Ver2 기준 최종 권장 실험 순서</h3>
+      <ol>
+        <li><strong>Dense-only 1차 비교</strong>: <code>e5</code>, <code>jina</code>, <code>gte</code>, <code>ko-sbert</code>, <code>KURE</code>, <code>snowflake</code></li>
+        <li><strong>Dense+BM25 2차 비교</strong>: 1차 상위 2개 dense 모델에 <code>BM25</code>를 붙여 hybrid 성능 측정</li>
+        <li><strong>Full-hybrid 기준선 비교</strong>: <code>bgem3 dense+sparse+multivector</code>와 비교</li>
+        <li><strong>국문 특화 검증</strong>: <code>upskyy/bge-m3-korean</code>은 dense-only부터 먼저 검증하고, sparse/multi-vector 헤드 호환성 확인 후 full-hybrid 후보로 승격</li>
+      </ol>
+      <h3>6-8) 실제 교체 가능 여부 판단</h3>
+      <table>
+        <thead><tr><th>시나리오</th><th>현재 코드에서 env만으로 교체 가능 여부</th><th>판단</th></tr></thead>
+        <tbody>
+          <tr><td><code>e5 / jina / gte / ko-sbert / KURE / snowflake + dense only</code></td><td>가능</td><td><span class="ok">지원</span></td></tr>
+          <tr><td><code>e5 / jina / gte + BM25</code></td><td>가능</td><td><span class="ok">지원</span></td></tr>
+          <tr><td><code>bgem3 + learned sparse + multivector</code></td><td>가능</td><td><span class="ok">지원</span></td></tr>
+          <tr><td><code>upskyy/bge-m3-korean + learned sparse + multivector</code></td><td>조건부</td><td><span class="warn">헤드 호환성 별도 확인 필요</span></td></tr>
+          <tr><td><code>OpenAI embedding + dense only</code></td><td>불가</td><td><span class="warn">새 backend 구현 필요</span></td></tr>
+          <tr><td><code>bge-small / bge-base + dense only</code></td><td>불가</td><td><span class="warn">alias / model_dir / runtime 연결 필요</span></td></tr>
+          <tr><td><code>e5 + bgem3 sparse</code></td><td>불가</td><td><span class="warn">learned sparse family mismatch</span></td></tr>
+          <tr><td><code>e5 + bgem3 multivector</code></td><td>불가</td><td><span class="warn">multi-vector family mismatch</span></td></tr>
+          <tr><td><code>SPLADE</code></td><td>불가</td><td><span class="warn">새 sparse backend 구현 필요</span></td></tr>
+          <tr><td><code>ColBERT</code></td><td>불가</td><td><span class="warn">새 multi-vector backend 구현 필요</span></td></tr>
+        </tbody>
+      </table>
+      <p class="ok">이 순서로 가면 현재 코드 구조를 크게 깨지 않으면서도 "일반 dense 모델", "dense+lexical hybrid", "learned full-hybrid"를 단계적으로 비교할 수 있습니다.</p>
+    </section>
+
+    <!-- ═══════════════ 7) 결론 ═══════════════ -->
+
+    <section class="card">
+      <h2>7) 결론</h2>
+      <ul>
+        <li>ny_2nd (203cd7b)는 <strong>Interface Protocol + Factory 패턴</strong>이 이미 도입되어 있어 축별 실험 설계에 매우 유리한 구조입니다.</li>
+        <li><strong>임베딩</strong>: config.py의 상수를 env로 전환하고 backends.py에 STModelRuntime을 추가하면 8종 모델 비교가 가능합니다.</li>
+        <li><strong>Reranker</strong>: backends.py factory에 v2.5-gemma2/jina-reranker-v3을 등록하면 7종 비교가 가능합니다.</li>
+        <li><strong>LLM</strong>: generator.py에 LLMBackend Protocol 도입 후 Qwen3-8B/EXAONE-3.5-7.8B 등을 실험할 수 있습니다.</li>
+        <li><strong>총 수정 대상</strong>: config.py (env 전환), backends.py × 2 (factory 확장), reranker.py (새 클래스), generator.py (추상화) — <strong>5~6개 파일</strong>.</li>
+        <li><strong>Ver2 관점</strong>: 일반 dense 모델은 dense-only 또는 dense+BM25로 비교하고, learned sparse/multi-vector는 BGE-M3 계열과 분리해서 다뤄야 공정한 해석이 가능합니다.</li>
+        <li>최종 제출안은 성능뿐 아니라 <strong>지연시간, 근거충실도, 재현성 로그</strong>까지 함께 고정해야 안정적입니다.</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const wrap = document.querySelector('.wrap');
+      if (!wrap) return;
+      const cards = Array.from(wrap.querySelectorAll(':scope > section.card'));
+      if (!cards.length) return;
+      const controls = document.createElement('div');
+      controls.className = 'toggle-controls';
+      controls.innerHTML = [
+        '<button type="button" data-action="open-all">전체 챕터 펼치기</button>',
+        '<button type="button" data-action="close-all">전체 챕터 접기</button>',
+        '<button type="button" data-action="open-sub">하위 섹션 펼치기</button>',
+        '<button type="button" data-action="close-sub">하위 섹션 접기</button>'
+      ].join('');
+      const hero = wrap.querySelector(':scope > .hero');
+      if (hero) hero.insertAdjacentElement('afterend', controls);
+
+      function collapseSubsections(content) {
+        const nodes = Array.from(content.childNodes);
+        const hasH3 = nodes.some(n => n.nodeType === 1 && n.tagName === 'H3');
+        if (!hasH3) return;
+        content.innerHTML = '';
+        let i = 0;
+        while (i < nodes.length) {
+          const node = nodes[i];
+          if (node.nodeType === 1 && node.tagName === 'H3') {
+            const d = document.createElement('details');
+            d.className = 'subsection-toggle';
+            const s = document.createElement('summary');
+            s.textContent = node.textContent.trim();
+            d.appendChild(s);
+            const body = document.createElement('div');
+            body.className = 'subsection-body';
+            d.appendChild(body);
+            i += 1;
+            while (i < nodes.length && !(nodes[i].nodeType === 1 && nodes[i].tagName === 'H3')) {
+              body.appendChild(nodes[i]); i += 1;
+            }
+            content.appendChild(d);
+          } else { content.appendChild(node); i += 1; }
+        }
+      }
+
+      cards.forEach((card, idx) => {
+        const h2 = card.querySelector(':scope > h2');
+        if (!h2) return;
+        const title = h2.textContent.trim();
+        const nodes = Array.from(card.childNodes);
+        card.innerHTML = '';
+        const chapter = document.createElement('details');
+        chapter.className = 'chapter-toggle';
+        chapter.open = idx === 0;
+        const summary = document.createElement('summary');
+        summary.textContent = title;
+        const content = document.createElement('div');
+        content.className = 'chapter-content';
+        nodes.forEach((n) => { if (n === h2) return; content.appendChild(n); });
+        collapseSubsections(content);
+        chapter.appendChild(summary);
+        chapter.appendChild(content);
+        card.appendChild(chapter);
+      });
+
+      controls.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const chapters = wrap.querySelectorAll('details.chapter-toggle');
+        const subs = wrap.querySelectorAll('details.subsection-toggle');
+        if (action === 'open-all') chapters.forEach(d => { d.open = true; });
+        if (action === 'close-all') chapters.forEach(d => { d.open = false; });
+        if (action === 'open-sub') subs.forEach(d => { d.open = true; });
+        if (action === 'close-sub') subs.forEach(d => { d.open = false; });
+      });
+    })();
+  </script>
+</body>
+</html>
